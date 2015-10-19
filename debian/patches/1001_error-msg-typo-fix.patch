@@ -1,0 +1,33 @@
+Description: Fix spelling error in pki_* code
+Author: Mike Gabriel <mike.gabriel@das-netzwerkteam.de>
+--- a/src/pki_crypto.c
++++ b/src/pki_crypto.c
+@@ -628,7 +628,7 @@
+ #endif
+         case SSH_KEYTYPE_UNKNOWN:
+             BIO_free(mem);
+-            ssh_pki_log("Unkown or invalid private key type %d", key->type);
++            ssh_pki_log("Unknown or invalid private key type %d", key->type);
+             return NULL;
+     }
+ 
+@@ -751,7 +751,7 @@
+ #endif
+         case SSH_KEYTYPE_UNKNOWN:
+             BIO_free(mem);
+-            ssh_pki_log("Unkown or invalid private key type %d", type);
++            ssh_pki_log("Unknown or invalid private key type %d", type);
+             return NULL;
+     }
+ 
+--- a/src/pki_gcrypt.c
++++ b/src/pki_gcrypt.c
+@@ -668,7 +668,7 @@
+             break;
+         case SSH_KEYTYPE_ECDSA:
+         case SSH_KEYTYPE_UNKNOWN:
+-            ssh_pki_log("Unkown or invalid private key type %d", type);
++            ssh_pki_log("Unknown or invalid private key type %d", type);
+             return NULL;
+     }
+ 
