@@ -239,9 +239,9 @@ static int check_public_key(ssh_session session, char **tokens) {
       /* TODO: fix the hardcoding */
       tmpstring->size = htonl(len);
 #ifdef HAVE_LIBGCRYPT
-      bignum_bn2bin(tmpbn, len, string_data(tmpstring));
+      bignum_bn2bin(tmpbn, len, ssh_string_data(tmpstring));
 #elif defined HAVE_LIBCRYPTO
-      bignum_bn2bin(tmpbn, string_data(tmpstring));
+      bignum_bn2bin(tmpbn, ssh_string_data(tmpstring));
 #endif
       bignum_free(tmpbn);
       if (buffer_add_ssh_string(pubkey_buffer, tmpstring) < 0) {
@@ -435,7 +435,7 @@ int ssh_is_server_known(ssh_session session) {
   	return SSH_SERVER_ERROR;
   }
   host = ssh_lowercase(session->opts.host);
-  hostport = ssh_hostport(host, session->opts.port);
+  hostport = ssh_hostport(host, session->opts.port > 0 ? session->opts.port : 22);
   if (host == NULL || hostport == NULL) {
     ssh_set_error_oom(session);
     SAFE_FREE(host);
@@ -542,7 +542,7 @@ int ssh_write_knownhost(ssh_session session) {
 
     host = ssh_lowercase(session->opts.host);
     /* If using a nonstandard port, save the host in the [host]:port format */
-    if(session->opts.port != 22) {
+    if (session->opts.port > 0 && session->opts.port != 22) {
         hostport = ssh_hostport(host, session->opts.port);
         SAFE_FREE(host);
         if (hostport == NULL) {
@@ -682,7 +682,7 @@ char **ssh_knownhosts_algorithms(ssh_session session) {
   }
 
   host = ssh_lowercase(session->opts.host);
-  hostport = ssh_hostport(host, session->opts.port);
+  hostport = ssh_hostport(host, session->opts.port > 0 ? session->opts.port : 22);
   array = malloc(sizeof(char *) * KNOWNHOSTS_MAXTYPES);
 
   if (host == NULL || hostport == NULL || array == NULL) {

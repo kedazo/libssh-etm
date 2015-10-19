@@ -1,14 +1,14 @@
 project(libssh C)
 
 # Required cmake version
-cmake_minimum_required(VERSION 2.6.0)
+cmake_minimum_required(VERSION 2.8.5)
 
 # global needed variables
 set(APPLICATION_NAME ${PROJECT_NAME})
 
 set(APPLICATION_VERSION_MAJOR "0")
-set(APPLICATION_VERSION_MINOR "6")
-set(APPLICATION_VERSION_PATCH "3")
+set(APPLICATION_VERSION_MINOR "7")
+set(APPLICATION_VERSION_PATCH "2")
 
 set(APPLICATION_VERSION "${APPLICATION_VERSION_MAJOR}.${APPLICATION_VERSION_MINOR}.${APPLICATION_VERSION_PATCH}")
 
@@ -19,12 +19,12 @@ set(APPLICATION_VERSION "${APPLICATION_VERSION_MAJOR}.${APPLICATION_VERSION_MINO
 #     Increment AGE. Set REVISION to 0
 #   If the source code was changed, but there were no interface changes:
 #     Increment REVISION.
-set(LIBRARY_VERSION "4.4.1")
+set(LIBRARY_VERSION "4.4.0")
 set(LIBRARY_SOVERSION "4")
 
 # where to look first for cmake modules, before ${CMAKE_ROOT}/Modules/ is checked
 set(CMAKE_MODULE_PATH
-  ${CMAKE_SOURCE_DIR}/cmake/Modules
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules
 )
 
 # add definitions
@@ -84,8 +84,8 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 # pkg-config file
+if (UNIX)
 configure_file(libssh.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libssh.pc)
-configure_file(libssh_threads.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libssh_threads.pc)
 install(
   FILES
     ${CMAKE_CURRENT_BINARY_DIR}/libssh.pc
@@ -96,18 +96,36 @@ install(
     pkgconfig
 )
 
+    if (LIBSSH_THREADS)
+        configure_file(libssh_threads.pc.cmake ${CMAKE_CURRENT_BINARY_DIR}/libssh_threads.pc)
+        install(
+          FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/libssh.pc
+            ${CMAKE_CURRENT_BINARY_DIR}/libssh_threads.pc
+          DESTINATION
+            ${LIB_INSTALL_DIR}/pkgconfig
+          COMPONENT
+            pkgconfig
+        )
+    endif (LIBSSH_THREADS)
+endif (UNIX)
+
 # cmake config files
-configure_file(libssh-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/libssh-config.cmake @ONLY)
-configure_file(libssh-config-version.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/libssh-config-version.cmake @ONLY)
+set(LIBSSH_LIBRARY_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}ssh${CMAKE_SHARED_LIBRARY_SUFFIX})
+set(LIBSSH_THREADS_LIBRARY_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}ssh${CMAKE_SHARED_LIBRARY_SUFFIX})
+
+configure_file(${PROJECT_NAME}-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake @ONLY)
+configure_file(${PROJECT_NAME}-config-version.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake @ONLY)
 install(
     FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/libssh-config.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/libssh-config-version.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
     DESTINATION
-        ${CMAKE_INSTALL_DIR}
+        ${CMAKE_INSTALL_DIR}/${PROJECT_NAME}
     COMPONENT
         devel
 )
+
 
 # in tree build settings
 configure_file(libssh-build-tree-settings.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/libssh-build-tree-settings.cmake @ONLY)

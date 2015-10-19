@@ -35,9 +35,9 @@
 #include "libssh/poll.h"
 #include "libssh/socket.h"
 #include "libssh/session.h"
+#include "libssh/misc.h"
 #ifdef WITH_SERVER
 #include "libssh/server.h"
-#include "libssh/misc.h"
 #endif
 
 
@@ -116,7 +116,11 @@ static poll_fn ssh_poll_emu;
 #else /* _WIN32 */
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/time.h>
+
+# ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# endif
+
 #endif /* _WIN32 */
 
 #ifdef HAVE_UNISTD_H
@@ -597,11 +601,17 @@ int ssh_poll_ctx_dopoll(ssh_poll_ctx ctx, int timeout) {
   ssh_poll_handle p;
   socket_t fd;
   int revents;
+  struct ssh_timestamp ts;
 
   if (!ctx->polls_used)
     return SSH_ERROR;
 
-  rc = ssh_poll(ctx->pollfds, ctx->polls_used, timeout);
+  ssh_timestamp_init(&ts);
+  do {
+    int tm = ssh_timeout_update(&ts, timeout);
+    rc = ssh_poll(ctx->pollfds, ctx->polls_used, tm);
+  } while (rc == -1 && errno == EINTR);
+
   if(rc < 0)
     return SSH_ERROR;
   if (rc == 0)

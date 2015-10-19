@@ -1,6 +1,57 @@
 ChangeLog
 ==========
 
+version 0.7.2 (released 2015-09-15)
+  * Fixed OpenSSL detection on Windows
+  * Fixed return status for ssh_userauth_agent()
+  * Fixed KEX to prefer hmac-sha2-256
+  * Fixed sftp packet handling
+  * Fixed return values of ssh_key_is_(public|private)
+  * Fixed bug in global success reply
+
+version 0.7.1 (released 2015-06-30)
+  * Fixed SSH_AUTH_PARTIAL auth with auto public key
+  * Fixed memory leak in session options
+  * Fixed allocation of ed25519 public keys
+  * Fixed channel exit-status and exit-signal
+  * Reintroduce ssh_forward_listen()
+
+version 0.7.0 (released 2015-05-11)
+  * Added support for ed25519 keys
+  * Added SHA2 algorithms for HMAC
+  * Added improved and more secure buffer handling code
+  * Added callback for auth_none_function
+  * Added support for ECDSA private key signing
+  * Added more tests
+  * Fixed a lot of bugs
+  * Improved API documentation
+
+version 0.6.5 (released 2015-04-29)
+  * Fixed CVE-2015-3146
+  * Fixed port handling in config file
+  * Fixed the build with libgcrypt
+  * Fixed SFTP endian issues (rlo #179)
+  * Fixed uninitilized sig variable (rlo #167)
+  * Fixed polling issues which could result in a hang
+  * Fixed handling of EINTR in ssh_poll() (rlo #186)
+  * Fixed C99 issues with __func__
+  * Fixed some memory leaks
+  * Improved macro detection on Windows
+
+version 0.6.4 (released 2014-12-19)
+  * Fixed CVE-2014-8132.
+  * Added SHA-2 for session ID signing with ECDSA keys.
+  * Added support for ECDSA host keys.
+  * Added support for more ECDSA hostkey algorithms.
+  * Added ssh_pki_key_ecdsa_name() API.
+  * Fixed setting the bindfd only after successful listen.
+  * Fixed issues with user created sockets.
+  * Fixed several issues in libssh C++ wrapper.
+  * Fixed several documentation issues.
+  * Fixed channel exit-signal request.
+  * Fixed X11 request screen number in messages.
+  * Fixed several memory leaks.
+
 version 0.6.3 (released 2014-03-04)
   * Fixed CVE-2014-0017.
   * Fixed memory leak with ecdsa signatures.

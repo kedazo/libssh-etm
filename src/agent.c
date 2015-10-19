@@ -185,15 +185,32 @@ int ssh_set_agent_channel(ssh_session session, ssh_channel channel){
   return SSH_OK;
 }
 
+/** @brief sets the SSH agent socket.
+ * The SSH agent will be used to authenticate this client using
+ * the given socket to communicate with the ssh-agent. The caller
+ * is responsible for connecting to the socket prior to calling
+ * this function.
+ * @returns SSH_OK in case of success
+ *          SSH_ERROR in case of an error
+ */
+int ssh_set_agent_socket(ssh_session session, socket_t fd){
+  if (!session)
+    return SSH_ERROR;
+  if (!session->agent){
+    ssh_set_error(session, SSH_REQUEST_DENIED, "Session has no active agent");
+    return SSH_ERROR;
+  }
+
+  ssh_socket_set_fd(session->agent->sock, fd);
+  return SSH_OK;
+}
 
 void agent_close(struct ssh_agent_struct *agent) {
   if (agent == NULL) {
     return;
   }
 
-  if (getenv("SSH_AUTH_SOCK")) {
-    ssh_socket_close(agent->sock);
-  }
+  ssh_socket_close(agent->sock);
 }
 
 void agent_free(ssh_agent agent) {
@@ -300,7 +317,7 @@ static int agent_talk(struct ssh_session_struct *session,
           "Error reading response from authentication socket.");
       return -1;
     }
-    if (buffer_add_data(reply, payload, n) < 0) {
+    if (ssh_buffer_add_data(reply, payload, n) < 0) {
       SSH_LOG(SSH_LOG_WARN, "Not enough space");
       return -1;
     }
@@ -393,7 +410,7 @@ int ssh_agent_get_ident_count(struct ssh_session_struct *session) {
   }
 
   if (session->agent->ident) {
-    buffer_reinit(session->agent->ident);
+    ssh_buffer_reinit(session->agent->ident);
   }
   session->agent->ident = reply;
 
@@ -526,7 +543,7 @@ ssh_string ssh_agent_sign_data(ssh_session session,
         ssh_buffer_free(request);
         return NULL;
     }
-    if (buffer_add_data(request, buffer_get_rest(data), dlen) < 0) {
+    if (ssh_buffer_add_data(request, buffer_get_rest(data), dlen) < 0) {
         ssh_buffer_free(request);
         return NULL;
     }

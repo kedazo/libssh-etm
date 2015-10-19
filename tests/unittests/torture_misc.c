@@ -113,23 +113,35 @@ static void torture_path_expand_tilde_win(void **state) {
 static void torture_path_expand_tilde_unix(void **state) {
     char h[256];
     char *d;
+    char *user;
+    char *home;
 
     (void) state;
 
-    snprintf(h, 256 - 1, "%s/.ssh", getenv("HOME"));
+    user = getenv("USER");
+    if (user == NULL){
+        user = getenv("LOGNAME");
+    }
+    assert_non_null(user);
+    home = getenv("HOME");
+    assert_non_null(home);
+    snprintf(h, 256 - 1, "%s/.ssh", home);
 
     d = ssh_path_expand_tilde("~/.ssh");
+    assert_non_null(d);
     assert_string_equal(d, h);
     free(d);
 
     d = ssh_path_expand_tilde("/guru/meditation");
+    assert_non_null(d);
     assert_string_equal(d, "/guru/meditation");
     free(d);
 
-    snprintf(h, 256 - 1, "~%s/.ssh", getenv("USER"));
+    snprintf(h, 256 - 1, "~%s/.ssh", user);
     d = ssh_path_expand_tilde(h);
+    assert_non_null(d);
 
-    snprintf(h, 256 - 1, "%s/.ssh", getenv("HOME"));
+    snprintf(h, 256 - 1, "%s/.ssh", home);
     assert_string_equal(d, h);
     free(d);
 }
@@ -146,6 +158,7 @@ static void torture_path_expand_escape(void **state) {
     session->opts.username = strdup("root");
 
     e = ssh_path_expand_escape(session, s);
+    assert_non_null(e);
     assert_string_equal(e, "guru/meditation/by/root");
     free(e);
 }
@@ -157,6 +170,7 @@ static void torture_path_expand_known_hosts(void **state) {
     session->opts.sshdir = strdup("/home/guru/.ssh");
 
     tmp = ssh_path_expand_escape(session, "%d/known_hosts");
+    assert_non_null(tmp);
     assert_string_equal(tmp, "/home/guru/.ssh/known_hosts");
     free(tmp);
 }
@@ -187,16 +201,16 @@ static void torture_timeout_update(void **state){
 
 int torture_run_tests(void) {
     int rc;
-    const UnitTest tests[] = {
+    UnitTest tests[] = {
         unit_test(torture_get_user_home_dir),
         unit_test(torture_basename),
         unit_test(torture_dirname),
         unit_test(torture_ntohll),
-//#ifdef _WIN32
-//        unit_test(torture_path_expand_tilde_win),
-//#else
-//        unit_test(torture_path_expand_tilde_unix),
-//#endif
+#ifdef _WIN32
+        unit_test(torture_path_expand_tilde_win),
+#else
+        unit_test(torture_path_expand_tilde_unix),
+#endif
         unit_test_setup_teardown(torture_path_expand_escape, setup, teardown),
         unit_test_setup_teardown(torture_path_expand_known_hosts, setup, teardown),
         unit_test(torture_timeout_elapsed),
@@ -204,6 +218,7 @@ int torture_run_tests(void) {
     };
 
     ssh_init();
+    torture_filter_tests(tests);
     rc=run_tests(tests);
     ssh_finalize();
     return rc;

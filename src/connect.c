@@ -64,6 +64,10 @@
 #include <wspiapi.h>
 #endif
 
+#ifndef EINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
+#endif
+
 #else /* _WIN32 */
 
 #include <netdb.h>
@@ -285,6 +289,7 @@ socket_t ssh_connect_host(ssh_session session, const char *host,
       socket_t ret = ssh_connect_ai_timeout(session, host, port, itr,
           timeout, usec, s);
 
+      freeaddrinfo(ai);
       return ret;
     }
 
@@ -382,7 +387,16 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
         continue;
     }
 
-    connect(s, itr->ai_addr, itr->ai_addrlen);
+    errno = 0;
+    rc = connect(s, itr->ai_addr, itr->ai_addrlen);
+    if (rc == -1 && (errno != 0) && (errno != EINPROGRESS)) {
+      ssh_set_error(session, SSH_FATAL,
+          "Failed to connect: %s", strerror(errno));
+      ssh_connect_socket_close(s);
+      s = -1;
+      continue;
+    }
+
     break;
   }
 

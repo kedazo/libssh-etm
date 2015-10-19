@@ -44,7 +44,7 @@
 #include "libssh/session.h"
 #include "libssh/pki.h"
 #include "libssh/pki_priv.h"
-#include "libssh/dh.h"
+#include "libssh/bignum.h"
 
 struct pem_get_password_struct {
     ssh_auth_callback fn;
@@ -89,7 +89,7 @@ static int pki_key_ecdsa_to_nid(EC_KEY *k)
     return -1;
 }
 
-static const char *pki_key_ecdsa_nid_to_name(int nid)
+const char *pki_key_ecdsa_nid_to_name(int nid)
 {
     switch (nid) {
         case NID_X9_62_prime256v1:
@@ -214,6 +214,7 @@ int pki_pubkey_build_ecdsa(ssh_key key, int nid, ssh_string e)
 ssh_key pki_key_dup(const ssh_key key, int demote)
 {
     ssh_key new;
+    int rc;
 
     new = ssh_key_new();
     if (new == NULL) {
@@ -345,12 +346,12 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
         break;
     case SSH_KEYTYPE_ECDSA:
 #ifdef HAVE_OPENSSL_ECC
+        new->ecdsa_nid = key->ecdsa_nid;
+
         /* privkey -> pubkey */
         if (demote && ssh_key_is_private(key)) {
             const EC_POINT *p;
             int ok;
-
-            new->ecdsa_nid = key->ecdsa_nid;
 
             new->ecdsa = EC_KEY_new_by_curve_name(key->ecdsa_nid);
             if (new->ecdsa == NULL) {
@@ -371,7 +372,14 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
         }
         break;
 #endif
+    case SSH_KEYTYPE_ED25519:
+        rc = pki_ed25519_key_dup(new, key);
+        if (rc != SSH_OK) {
+            goto fail;
+        }
+        break;
     case SSH_KEYTYPE_UNKNOWN:
+    default:
         ssh_key_free(new);
         return NULL;
     }
@@ -383,10 +391,20 @@ fail:
 }
 
 int pki_key_generate_rsa(ssh_key key, int parameter){
-    key->rsa = RSA_generate_key(parameter, 65537, NULL, NULL);
-    if(key->rsa == NULL)
-        return SSH_ERROR;
-    return SSH_OK;
+	BIGNUM *e;
+	int rc;
+
+	e = BN_new();
+	key->rsa = RSA_new();
+
+	BN_set_word(e, 65537);
+	rc = RSA_generate_key_ex(key->rsa, parameter, e, NULL);
+
+	BN_free(e);
+
+	if (rc == -1 || key->rsa == NULL)
+		return SSH_ERROR;
+	return SSH_OK;
 }
 
 int pki_key_generate_dss(ssh_key key, int parameter){
@@ -523,7 +541,10 @@ int pki_key_compare(const ssh_key k1,
                 break;
             }
 #endif
+        case SSH_KEYTYPE_ED25519:
+            /* ed25519 keys handled globaly */
         case SSH_KEYTYPE_UNKNOWN:
+        default:
             return 1;
     }
 
@@ -626,9 +647,13 @@ ssh_string pki_private_key_to_pem(const ssh_key key,
             }
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            BIO_free(mem);
+            ssh_pki_log("PEM output not supported for key type ssh-ed25519");
+            return NULL;
         case SSH_KEYTYPE_UNKNOWN:
             BIO_free(mem);
-            ssh_pki_log("Unknown or invalid private key type %d", key->type);
+            ssh_pki_log("Unkown or invalid private key type %d", key->type);
             return NULL;
     }
 
@@ -655,6 +680,7 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
     BIO *mem = NULL;
     DSA *dsa = NULL;
     RSA *rsa = NULL;
+    ed25519_privkey *ed25519 = NULL;
     ssh_key key;
     enum ssh_keytypes_e type;
 #ifdef HAVE_OPENSSL_ECC
@@ -749,9 +775,11 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
 
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            /* Cannot open ed25519 keys with libcrypto */
         case SSH_KEYTYPE_UNKNOWN:
             BIO_free(mem);
-            ssh_pki_log("Unknown or invalid private key type %d", type);
+            ssh_pki_log("Unkown or invalid private key type %d", type);
             return NULL;
     }
 
@@ -766,6 +794,7 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
     key->dsa = dsa;
     key->rsa = rsa;
     key->ecdsa = ecdsa;
+    key->ed25519_privkey = ed25519;
 #ifdef HAVE_OPENSSL_ECC
     if (key->type == SSH_KEYTYPE_ECDSA) {
         key->ecdsa_nid = pki_key_ecdsa_to_nid(key->ecdsa);
@@ -937,7 +966,7 @@ ssh_string pki_publickey_to_blob(const ssh_key key)
             break;
         case SSH_KEYTYPE_ECDSA:
 #ifdef HAVE_OPENSSL_ECC
-            rc = buffer_reinit(buffer);
+            rc = ssh_buffer_reinit(buffer);
             if (rc < 0) {
                 ssh_buffer_free(buffer);
                 return NULL;
@@ -987,7 +1016,14 @@ ssh_string pki_publickey_to_blob(const ssh_key key)
 
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            rc = pki_ed25519_public_key_to_blob(buffer, key);
+            if (rc == SSH_ERROR){
+                goto fail;
+            }
+            break;
         case SSH_KEYTYPE_UNKNOWN:
+        default:
             goto fail;
     }
 
@@ -1148,8 +1184,6 @@ static ssh_string pki_dsa_signature_to_blob(const ssh_signature sig)
 
 ssh_string pki_signature_to_blob(const ssh_signature sig)
 {
-    ssh_string r;
-    ssh_string s;
     ssh_string sig_blob = NULL;
 
     switch(sig->type) {
@@ -1163,6 +1197,8 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
         case SSH_KEYTYPE_ECDSA:
 #ifdef HAVE_OPENSSL_ECC
         {
+            ssh_string r;
+            ssh_string s;
             ssh_buffer b;
             int rc;
 
@@ -1206,6 +1242,10 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
             break;
         }
 #endif
+        case SSH_KEYTYPE_ED25519:
+            sig_blob = pki_ed25519_sig_to_blob(sig);
+            break;
+        default:
         case SSH_KEYTYPE_UNKNOWN:
             ssh_pki_log("Unknown signature key type: %s", sig->type_c);
             return NULL;
@@ -1223,9 +1263,15 @@ static ssh_signature pki_signature_from_rsa_blob(const ssh_key pubkey,
     char *blob_padded_data;
     ssh_string sig_blob_padded;
 
+    size_t rsalen = 0;
     size_t len = ssh_string_len(sig_blob);
-    size_t rsalen= RSA_size(pubkey->rsa);
 
+    if (pubkey->rsa == NULL) {
+        ssh_pki_log("Pubkey RSA field NULL");
+        goto errout;
+    }
+
+    rsalen = RSA_size(pubkey->rsa);
     if (len > rsalen) {
         ssh_pki_log("Signature is too big: %lu > %lu",
                     (unsigned long)len, (unsigned long)rsalen);
@@ -1277,6 +1323,7 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
     ssh_string r;
     ssh_string s;
     size_t len;
+    int rc;
 
     sig = ssh_signature_new();
     if (sig == NULL) {
@@ -1353,7 +1400,6 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
             { /* build ecdsa siganature */
                 ssh_buffer b;
                 uint32_t rlen;
-                int rc;
 
                 b = ssh_buffer_new();
                 if (b == NULL) {
@@ -1361,9 +1407,9 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
                     return NULL;
                 }
 
-                rc = buffer_add_data(b,
-                                     ssh_string_data(sig_blob),
-                                     ssh_string_len(sig_blob));
+                rc = ssh_buffer_add_data(b,
+                                         ssh_string_data(sig_blob),
+                                         ssh_string_len(sig_blob));
                 if (rc < 0) {
                     ssh_buffer_free(b);
                     ssh_signature_free(sig);
@@ -1381,7 +1427,7 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
                 ssh_print_hexa("r", ssh_string_data(r), ssh_string_len(r));
 #endif
 
-                sig->ecdsa_sig->r = make_string_bn(r);
+                make_string_bn_inplace(r, sig->ecdsa_sig->r);
                 ssh_string_burn(r);
                 ssh_string_free(r);
                 if (sig->ecdsa_sig->r == NULL) {
@@ -1402,7 +1448,7 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
                 ssh_print_hexa("s", ssh_string_data(s), ssh_string_len(s));
 #endif
 
-                sig->ecdsa_sig->s = make_string_bn(s);
+                make_string_bn_inplace(s, sig->ecdsa_sig->s);
                 ssh_string_burn(s);
                 ssh_string_free(s);
                 if (sig->ecdsa_sig->s == NULL) {
@@ -1421,6 +1467,14 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
 
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            rc = pki_ed25519_sig_from_blob(sig, sig_blob);
+            if (rc == SSH_ERROR){
+                ssh_signature_free(sig);
+                return NULL;
+            }
+            break;
+        default:
         case SSH_KEYTYPE_UNKNOWN:
             ssh_pki_log("Unknown signature type");
             ssh_signature_free(sig);
@@ -1468,6 +1522,15 @@ int pki_signature_verify(ssh_session session,
                 return SSH_ERROR;
             }
             break;
+        case SSH_KEYTYPE_ED25519:
+            rc = pki_ed25519_verify(key, sig, hash, hlen);
+            if (rc != SSH_OK){
+                ssh_set_error(session,
+                              SSH_FATAL,
+                              "ed25519 signature verification error");
+                return SSH_ERROR;
+            }
+            break;
         case SSH_KEYTYPE_ECDSA:
 #ifdef HAVE_OPENSSL_ECC
             rc = ECDSA_do_verify(hash,
@@ -1484,6 +1547,7 @@ int pki_signature_verify(ssh_session session,
             break;
 #endif
         case SSH_KEYTYPE_UNKNOWN:
+        default:
             ssh_set_error(session, SSH_FATAL, "Unknown public key type");
             return SSH_ERROR;
     }
@@ -1495,6 +1559,7 @@ ssh_signature pki_do_sign(const ssh_key privkey,
                           const unsigned char *hash,
                           size_t hlen) {
     ssh_signature sig;
+    int rc;
 
     sig = ssh_signature_new();
     if (sig == NULL) {
@@ -1542,7 +1607,15 @@ ssh_signature pki_do_sign(const ssh_key privkey,
 
             break;
 #endif /* HAVE_OPENSSL_ECC */
+        case SSH_KEYTYPE_ED25519:
+            rc = pki_ed25519_sign(privkey, sig, hash, hlen);
+            if (rc != SSH_OK){
+                ssh_signature_free(sig);
+                return NULL;
+            }
+            break;
         case SSH_KEYTYPE_UNKNOWN:
+        default:
             ssh_signature_free(sig);
             return NULL;
     }
@@ -1589,7 +1662,10 @@ ssh_signature pki_do_sign_sessionid(const ssh_key key,
             }
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            /* ED25519 handled in caller */
         case SSH_KEYTYPE_UNKNOWN:
+        default:
             ssh_signature_free(sig);
             return NULL;
     }

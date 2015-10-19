@@ -17,11 +17,23 @@
 /* Define to 1 if you have the <argp.h> header file. */
 #cmakedefine HAVE_ARGP_H 1
 
+/* Define to 1 if you have the <aprpa/inet.h> header file. */
+#cmakedefine HAVE_ARPA_INET_H 1
+
 /* Define to 1 if you have the <pty.h> header file. */
 #cmakedefine HAVE_PTY_H 1
 
+/* Define to 1 if you have the <utmp.h> header file. */
+#cmakedefine HAVE_UTMP_H 1
+
 /* Define to 1 if you have the <util.h> header file. */
 #cmakedefine HAVE_UTIL_H 1
+
+/* Define to 1 if you have the <libutil.h> header file. */
+#cmakedefine HAVE_LIBUTIL_H 1
+
+/* Define to 1 if you have the <sys/time.h> header file. */
+#cmakedefine HAVE_SYS_TIME_H 1
 
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H 1
@@ -135,6 +147,10 @@
 #cmakedefine HAVE_MSC_THREAD_LOCAL_STORAGE 1
 
 #cmakedefine HAVE_GCC_VOLATILE_MEMORY_PROTECTION 1
+#cmakedefine HAVE_GCC_NARG_MACRO 1
+
+#cmakedefine HAVE_COMPILER__FUNC__ 1
+#cmakedefine HAVE_COMPILER__FUNCTION__ 1
 
 /* Define to 1 if you want to enable GSSAPI */
 #cmakedefine WITH_GSSAPI 1

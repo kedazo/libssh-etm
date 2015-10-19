@@ -128,7 +128,7 @@ static char *ssh_config_get_token(char **str) {
   c = ssh_config_get_cmd(str);
 
   for (r = c; *c; c++) {
-    if (isblank(*c)) {
+    if (isblank(*c) || *c == '=') {
       *c = '\0';
       goto out;
     }
@@ -245,7 +245,7 @@ static int ssh_config_parse_line(ssh_session session, const char *line,
       }
       break;
     case SOC_PORT:
-      if (session->opts.port == 22) {
+      if (session->opts.port == 0) {
           p = ssh_config_get_str_tok(&s, NULL);
           if (p && *parsing) {
               ssh_options_set(session, SSH_OPTIONS_PORT_STR, p);
@@ -383,7 +383,7 @@ int ssh_config_parse_file(ssh_session session, const char *filename) {
     return 0;
   }
 
-  SSH_LOG(SSH_LOG_RARE, "Reading configuration data from %s", filename);
+  SSH_LOG(SSH_LOG_PACKET, "Reading configuration data from %s", filename);
 
   parsing = 1;
   while (fgets(line, sizeof(line), f)) {

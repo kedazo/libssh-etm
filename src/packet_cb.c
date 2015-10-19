@@ -24,6 +24,9 @@
 #include "config.h"
 
 #include <stdlib.h>
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
 
 #include "libssh/priv.h"
 #include "libssh/buffer.h"
@@ -43,29 +46,35 @@
  * @brief Handle a SSH_DISCONNECT packet.
  */
 SSH_PACKET_CALLBACK(ssh_packet_disconnect_callback){
-	uint32_t code;
-	char *error=NULL;
-	ssh_string error_s;
-	(void)user;
-	(void)type;
-  buffer_get_u32(packet, &code);
+  int rc;
+  uint32_t code = 0;
+  char *error = NULL;
+  ssh_string error_s;
+  (void)user;
+  (void)type;
+
+  rc = buffer_get_u32(packet, &code);
+  if (rc != 0) {
+    code = ntohl(code);
+  }
+
   error_s = buffer_get_ssh_string(packet);
   if (error_s != NULL) {
     error = ssh_string_to_char(error_s);
     ssh_string_free(error_s);
   }
-  SSH_LOG(SSH_LOG_PACKET, "Received SSH_MSG_DISCONNECT %d:%s",code,
-      error != NULL ? error : "no error");
+  SSH_LOG(SSH_LOG_PACKET, "Received SSH_MSG_DISCONNECT %d:%s",
+                          code, error != NULL ? error : "no error");
   ssh_set_error(session, SSH_FATAL,
-      "Received SSH_MSG_DISCONNECT: %d:%s",code,
-      error != NULL ? error : "no error");
+      "Received SSH_MSG_DISCONNECT: %d:%s",
+      code, error != NULL ? error : "no error");
   SAFE_FREE(error);
 
   ssh_socket_close(session->socket);
   session->alive = 0;
-  session->session_state= SSH_SESSION_STATE_ERROR;
-	/* TODO: handle a graceful disconnect */
-	return SSH_PACKET_USED;
+  session->session_state = SSH_SESSION_STATE_ERROR;
+  /* TODO: handle a graceful disconnect */
+  return SSH_PACKET_USED;
 }
 
 /**
@@ -88,7 +97,7 @@ SSH_PACKET_CALLBACK(ssh_packet_dh_reply){
   (void)type;
   (void)user;
   SSH_LOG(SSH_LOG_PROTOCOL,"Received SSH_KEXDH_REPLY");
-  if(session->session_state!= SSH_SESSION_STATE_DH &&
+  if (session->session_state != SSH_SESSION_STATE_DH ||
 		session->dh_handshake_state != DH_STATE_INIT_SENT){
 	ssh_set_error(session,SSH_FATAL,"ssh_packet_dh_reply called in wrong state : %d:%d",
 			session->session_state,session->dh_handshake_state);
@@ -129,12 +138,16 @@ SSH_PACKET_CALLBACK(ssh_packet_newkeys){
   (void)user;
   (void)type;
   SSH_LOG(SSH_LOG_PROTOCOL, "Received SSH_MSG_NEWKEYS");
-  if(session->session_state!= SSH_SESSION_STATE_DH &&
-		session->dh_handshake_state != DH_STATE_NEWKEYS_SENT){
-	ssh_set_error(session,SSH_FATAL,"ssh_packet_newkeys called in wrong state : %d:%d",
-			session->session_state,session->dh_handshake_state);
-	goto error;
+
+  if (session->session_state != SSH_SESSION_STATE_DH ||
+      session->dh_handshake_state != DH_STATE_NEWKEYS_SENT) {
+      ssh_set_error(session,
+                    SSH_FATAL,
+                    "ssh_packet_newkeys called in wrong state : %d:%d",
+                    session->session_state,session->dh_handshake_state);
+      goto error;
   }
+
   if(session->server){
     /* server things are done in server.c */
     session->dh_handshake_state=DH_STATE_FINISHED;

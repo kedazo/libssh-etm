@@ -48,9 +48,14 @@ endif(CMAKE_COMPILER_IS_GNUCC AND NOT MINGW AND NOT OS2)
 # HEADER FILES
 check_include_file(argp.h HAVE_ARGP_H)
 check_include_file(pty.h HAVE_PTY_H)
+check_include_file(utmp.h HAVE_UTMP_H)
 check_include_file(termios.h HAVE_TERMIOS_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
 check_include_file(util.h HAVE_UTIL_H)
+check_include_file(libutil.h HAVE_LIBUTIL_H)
+check_include_file(sys/time.h HAVE_SYS_TIME_H)
+check_include_file(sys/param.h HAVE_SYS_PARAM_H)
+check_include_file(arpa/inet.h HAVE_ARPA_INET_H)
 
 if (WIN32)
   check_include_files("winsock2.h;ws2tcpip.h;wspiapi.h" HAVE_WSPIAPI_H)
@@ -60,23 +65,31 @@ if (WIN32)
   check_include_files("winsock2.h;ws2tcpip.h" HAVE_WS2TCPIP_H)
 endif (WIN32)
 
-set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIRS})
-check_include_file(openssl/aes.h HAVE_OPENSSL_AES_H)
+if (OPENSSL_FOUND)
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_include_file(openssl/des.h HAVE_OPENSSL_DES_H)
+    if (NOT HAVE_OPENSSL_DES_H)
+        message(FATAL_ERROR "Could not detect openssl/des.h")
+    endif()
 
-set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIRS})
-check_include_file(openssl/blowfish.h HAVE_OPENSSL_BLOWFISH_H)
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_include_file(openssl/aes.h HAVE_OPENSSL_AES_H)
+    if (NOT HAVE_OPENSSL_AES_H)
+        message(FATAL_ERROR "Could not detect openssl/aes.h")
+    endif()
 
-set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIRS})
-check_include_file(openssl/des.h HAVE_OPENSSL_DES_H)
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_include_file(openssl/blowfish.h HAVE_OPENSSL_BLOWFISH_H)
 
-set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIRS})
-check_include_file(openssl/ecdh.h HAVE_OPENSSL_ECDH_H)
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_include_file(openssl/ecdh.h HAVE_OPENSSL_ECDH_H)
 
-set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIRS})
-check_include_file(openssl/ec.h HAVE_OPENSSL_EC_H)
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_include_file(openssl/ec.h HAVE_OPENSSL_EC_H)
 
-set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIRS})
-check_include_file(openssl/ecdsa.h HAVE_OPENSSL_ECDSA_H)
+    set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+    check_include_file(openssl/ecdsa.h HAVE_OPENSSL_ECDSA_H)
+endif()
 
 if (CMAKE_HAVE_PTHREAD_H)
   set(HAVE_PTHREAD_H 1)
@@ -98,11 +111,6 @@ check_function_exists(isblank HAVE_ISBLANK)
 check_function_exists(strncpy HAVE_STRNCPY)
 check_function_exists(vsnprintf HAVE_VSNPRINTF)
 check_function_exists(snprintf HAVE_SNPRINTF)
-check_function_exists(poll HAVE_POLL)
-check_function_exists(select HAVE_SELECT)
-check_function_exists(getaddrinfo HAVE_GETADDRINFO)
-check_function_exists(ntohll HAVE_NTOHLL)
-check_function_exists(htonll HAVE_HTONLL)
 
 if (WIN32)
     check_function_exists(_strtoui64 HAVE__STRTOUI64)
@@ -113,16 +121,27 @@ if (WIN32)
     check_function_exists(_snprintf_s HAVE__SNPRINTF_S)
 
     if (HAVE_WSPIAPI_H OR HAVE_WS2TCPIP_H)
-        set(HAVE_GETADDRINFO TRUE)
-        set(HAVE_GETHOSTBYNAME TRUE)
-        if (MSVC)
-            set(HAVE_NTOHLL TRUE)
-            set(HAVE_HTONLL TRUE)
-        endif (MSVC)
+        check_symbol_exists(ntohll winsock2.h HAVE_NTOHLL)
+        check_symbol_exists(htonll winsock2.h HAVE_HTONLL)
+
+        set(CMAKE_REQUIRED_LIBRARIES ws2_32)
+        check_symbol_exists(select "winsock2.h;ws2tcpip.h" HAVE_SELECT)
+        check_symbol_exists(poll "winsock2.h;ws2tcpip.h" HAVE_SELECT)
+        # The getaddrinfo function is defined to the WspiapiGetAddrInfo inline function
+        check_symbol_exists(getaddrinfo "winsock2.h;ws2tcpip.h" HAVE_GETADDRINFO)
+        set(CMAKE_REQUIRED_LIBRARIES)
     endif (HAVE_WSPIAPI_H OR HAVE_WS2TCPIP_H)
 
     set(HAVE_SELECT TRUE)
+else (WIN32)
+    check_function_exists(poll HAVE_POLL)
+    check_function_exists(select HAVE_SELECT)
+    check_function_exists(getaddrinfo HAVE_GETADDRINFO)
+
+    check_symbol_exists(ntohll arpa/inet.h HAVE_NTOHLL)
+    check_symbol_exists(htonll arpa/inet.h HAVE_HTONLL)
 endif (WIN32)
+
 
 if (UNIX)
     if (NOT LINUX)
@@ -199,6 +218,33 @@ int main(void)
 
     return 0;
 }" HAVE_GCC_VOLATILE_MEMORY_PROTECTION)
+
+check_c_source_compiles("
+#include <stdio.h>
+#define __VA_NARG__(...) (__VA_NARG_(_0, ## __VA_ARGS__, __RSEQ_N()) - 1)
+#define __VA_NARG_(...) __VA_ARG_N(__VA_ARGS__)
+#define __VA_ARG_N( _1, _2, _3, _4, _5, _6, _7, _8, _9,_10,N,...) N
+#define __RSEQ_N() 10, 9,  8,  7,  6,  5,  4,  3,  2,  1,  0
+#define myprintf(format, ...) printf((format), __VA_NARG__(__VA_ARGS__), __VA_ARGS__)
+int main(void) {
+    myprintf(\"%d %d %d %d\",1,2,3);
+    return 0;
+}" HAVE_GCC_NARG_MACRO)
+
+check_c_source_compiles("
+#include <stdio.h>
+int main(void) {
+    printf(\"%s\", __func__);
+    return 0;
+}" HAVE_COMPILER__FUNC__)
+
+check_c_source_compiles("
+#include <stdio.h>
+int main(void) {
+    printf(\"%s\", __FUNCTION__);
+    return 0;
+}" HAVE_COMPILER__FUNCTION__)
+
 
 if (WITH_DEBUG_CRYPTO)
   set(DEBUG_CRYPTO 1)
