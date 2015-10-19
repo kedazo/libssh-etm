@@ -1,3 +1,9 @@
+libssh (0.7.2-1borgcollective1) trusty; urgency=medium
+
+  * UPDATE to 0.7.2 
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 19 Oct 2015 09:42:27 +0200
+
 libssh (0.6.3-3ubuntu3) vivid; urgency=medium
 
   * Fix build with GCC 5.
