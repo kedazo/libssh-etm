@@ -1,3 +1,9 @@
+libssh (0.7.2-6wily6) wily; urgency=medium
+
+  * wily up 
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Oct 2015 11:05:19 +0100
+
 libssh (0.7.2-5vivid5) vivid; urgency=medium
 
   * vivid up
