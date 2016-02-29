@@ -71,7 +71,7 @@ if (libssh_threads_SRCS)
           SOVERSION
             ${LIBRARY_SOVERSION}
           OUTPUT_NAME
-            ${LIBSSH_LIBRARY_NAME}_threads
+            ssh_threads
           DEFINE_SYMBOL
             LIBSSH_EXPORTS
     )

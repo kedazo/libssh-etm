@@ -1,3 +1,45 @@
+libssh (0.7.3-16xenial1) xenial; urgency=medium
+
+  * xenial up
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:47:04 +0100
+
+libssh (0.7.3-15wily1) wily; urgency=medium
+
+  * wily up
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:46:44 +0100
+
+libssh (0.7.3-14vivid1) vivid; urgency=medium
+
+  * vivid up
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:46:26 +0100
+
+libssh (0.7.3-13utopic1) utopic; urgency=medium
+
+  * utopic up
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:45:51 +0100
+
+libssh (0.7.3-12trusty1) trusty; urgency=medium
+
+  * trusty up
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:45:31 +0100
+
+libssh (0.7.3-11precise1) precise; urgency=medium
+
+  * precise up
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:44:58 +0100
+
+libssh (0.7.3-10lucid1) lucid; urgency=medium
+
+  * Import of 0.7.3
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 29 Feb 2016 12:43:25 +0100
+
 libssh (0.7.2-6wily6) wily; urgency=medium
 
   * wily up 
