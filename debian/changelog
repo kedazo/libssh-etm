@@ -1,3 +1,33 @@
+libssh (0.7.3-34xenial) xenial; urgency=medium
+
+  * CRASH FIX: xenial
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Thu, 24 Mar 2016 16:02:08 +0100
+
+libssh (0.7.3-33wily1) wily; urgency=medium
+
+  * CRASH FIX: wily
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Thu, 24 Mar 2016 16:01:47 +0100
+
+libssh (0.7.3-32vivid1) vivid; urgency=medium
+
+  * CRASH FIX: vivid
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Thu, 24 Mar 2016 16:01:27 +0100
+
+libssh (0.7.3-31trusty1) trusty; urgency=medium
+
+  * CRASH FIX: trusty
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Thu, 24 Mar 2016 16:01:03 +0100
+
+libssh (0.7.3-30precise1) precise; urgency=medium
+
+  * CRASH FIX: precise
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Thu, 24 Mar 2016 16:00:24 +0100
+
 libssh (0.7.3-21xenial1) xenial; urgency=medium
 
   * xenial
