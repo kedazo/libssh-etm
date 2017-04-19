@@ -1,3 +1,44 @@
+libssh (0.7.5-0up0) UNRELEASED; urgency=medium
+
+  * New official release (0.7.5)
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 19 Apr 2017 13:12:57 +0200
+
+libssh (0.7.4-0up5) yakkety; urgency=medium
+
+  * Team upload.
+  * yakkety packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 06 Feb 2017 13:50:51 +0100
+
+libssh (0.7.4-0up4) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 06 Feb 2017 13:50:50 +0100
+
+libssh (0.7.4-0up3) trusty; urgency=medium
+
+  * Team upload.
+  * trusty packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 06 Feb 2017 13:50:49 +0100
+
+libssh (0.7.4-0up2) precise; urgency=medium
+
+  * Team upload.
+  * precise packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 06 Feb 2017 13:50:48 +0100
+
+libssh (0.7.4-0up1) vivid; urgency=medium
+
+  * Team upload.
+  * vivid packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 06 Feb 2017 13:49:02 +0100
+
 libssh (0.7.4-0up0) UNRELEASED; urgency=medium
 
   * Upgrade from upstream
