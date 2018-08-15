@@ -106,7 +106,7 @@ if (libssh_threads_SRCS)
             SOVERSION
               ${LIBRARY_SOVERSION}
             OUTPUT_NAME
-              ssh_threads
+              ${LIBSSH_LIBRARY_NAME}_threads
             ARCHIVE_OUTPUT_DIRECTORY
               ${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT_SUFFIX}
       )

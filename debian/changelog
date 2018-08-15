@@ -1,3 +1,9 @@
+libssh (0.8.1-0up0) UNRELEASED; urgency=medium
+
+  * New official release (0.8.1)
+
+ -- David Kedves <kedazo@severalnines.com>  Tue, 14 Aug 2018 09:09:10 +0200
+
 libssh (0.7.5-0up0) UNRELEASED; urgency=medium
 
   * New official release (0.7.5)

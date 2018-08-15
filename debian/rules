@@ -43,6 +43,8 @@ override_dh_auto_test:
 override_dh_install:
 	find debian/tmp-gcrypt -name libssh-gcrypt.so -execdir mv '{}' libssh.so \;
 	find debian/tmp-gcrypt -name libssh-gcrypt_threads.so -execdir mv '{}' libssh_threads.so \;
+	dh_link -v -Pdebian/tmp-gcrypt -plibssh-gcrypt-4
+	dh_link -v -Pdebian/tmp -plibssh-4
 	dh_install -plibssh-gcrypt-4 -plibssh-gcrypt-dev --sourcedir=debian/tmp-gcrypt
 	dh_install --remaining-packages
 
