@@ -1,3 +1,24 @@
+libssh (0.8.1-0up9) trusty; urgency=medium
+
+  * Team upload.
+  * trusty packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 15 Aug 2018 14:31:36 +0200
+
+libssh (0.8.1-0up8) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 15 Aug 2018 14:31:34 +0200
+
+libssh (0.8.1-0up7) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 15 Aug 2018 14:31:33 +0200
+
 libssh (0.8.1-0up6) trusty; urgency=medium
 
   * Team upload.
