@@ -1,7 +1,1 @@
-libssh-4_0.8.1-0up0_amd64.deb libs optional
-libssh-dbg_0.8.1-0up0_amd64.deb debug extra
-libssh-dev_0.8.1-0up0_amd64.deb libdevel optional
-libssh-doc_0.8.1-0up0_all.deb doc optional
-libssh-gcrypt-4_0.8.1-0up0_amd64.deb libs optional
-libssh-gcrypt-dev_0.8.1-0up0_amd64.deb libdevel optional
-libssh_0.8.1-0up0_amd64.buildinfo libs optional
+libssh_0.8.1-0up3_source.buildinfo libs optional
