@@ -1,5 +1,6 @@
 libssh.so.4 libssh-4 #MINVER#
  LIBSSH_4_5_0@LIBSSH_4_5_0 0.8.1-0up0
+ LIBSSH_4_6_0@LIBSSH_4_6_0 0.8.2-0up1
  _ssh_log@LIBSSH_4_5_0 0.8.1-0up0
  buffer_free@LIBSSH_4_5_0 0.8.1-0up0
  buffer_get@LIBSSH_4_5_0 0.8.1-0up0
@@ -316,6 +317,7 @@ libssh.so.4 libssh-4 #MINVER#
  ssh_pki_import_pubkey_file@LIBSSH_4_5_0 0.8.1-0up0
  ssh_pki_key_ecdsa_name@LIBSSH_4_5_0 0.8.1-0up0
  ssh_print_hexa@LIBSSH_4_5_0 0.8.1-0up0
+ ssh_print_hash@LIBSSH_4_6_0 0.8.2-0up1
  ssh_privatekey_type@LIBSSH_4_5_0 0.8.1-0up0
  ssh_publickey_to_file@LIBSSH_4_5_0 0.8.1-0up0
  ssh_remove_channel_callbacks@LIBSSH_4_5_0 0.8.1-0up0

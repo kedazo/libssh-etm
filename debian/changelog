@@ -1,3 +1,30 @@
+libssh (0.8.2-0up1) UNRELEASED; urgency=medium
+
+  * Import from new upstream release
+
+ -- David Kedves <kedazo@severalnines.com>  Fri, 31 Aug 2018 10:52:38 +0200
+
+libssh (0.8.1-0up12) trusty; urgency=medium
+
+  * Team upload.
+  * trusty packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 15 Aug 2018 14:48:47 +0200
+
+libssh (0.8.1-0up11) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 15 Aug 2018 14:48:46 +0200
+
+libssh (0.8.1-0up10) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Wed, 15 Aug 2018 14:48:45 +0200
+
 libssh (0.8.1-0up9) trusty; urgency=medium
 
   * Team upload.

@@ -150,6 +150,7 @@ endif (NOT WITH_MBEDTLS)
 
 check_function_exists(isblank HAVE_ISBLANK)
 check_function_exists(strncpy HAVE_STRNCPY)
+check_function_exists(strndup HAVE_STRNDUP)
 check_function_exists(strtoull HAVE_STRTOULL)
 check_function_exists(explicit_bzero HAVE_EXPLICIT_BZERO)
 check_function_exists(memset_s HAVE_MEMSET_S)
@@ -270,9 +271,12 @@ int main(void) {
 ###########################################################
 # For detecting attributes we need to treat warnings as
 # errors
-#if (UNIX)
-#    set(CMAKE_REQUIRED_FLAGS "-Werror")
-#endif (UNIX)
+if (UNIX)
+    check_c_compiler_flag("-Werror" REQUIRED_FLAGS_WERROR)
+    if (REQUIRED_FLAGS_WERROR)
+        set(CMAKE_REQUIRED_FLAGS "-Werror")
+    endif()
+endif (UNIX)
 
 check_c_source_compiles("
 void test_constructor_attribute(void) __attribute__ ((constructor));
@@ -354,9 +358,6 @@ int main(void) {
     return 0;
 }" HAVE_COMPILER__FUNCTION__)
 
-# Stop treating warnings as errors
-unset(CMAKE_REQUIRED_FLAGS)
-
 check_c_source_compiles("
 #define ARRAY_LEN 16
 void test_attr(const unsigned char *k)
@@ -365,6 +366,23 @@ void test_attr(const unsigned char *k)
 int main(void) {
     return 0;
 }" HAVE_GCC_BOUNDED_ATTRIBUTE)
+
+# Stop treating warnings as errors
+unset(CMAKE_REQUIRED_FLAGS)
+
+# Check for version script support
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/conftest.map" "VERS_1 {
+        global: sym;
+};
+VERS_2 {
+        global: sym;
+} VERS_1;
+")
+
+set(CMAKE_REQUIRED_FLAGS "-Wl,--version-script=\"${CMAKE_CURRENT_BINARY_DIR}/conftest.map\"")
+check_c_source_compiles("int main(void) { return 0; }" HAVE_LD_VERSION_SCRIPT)
+unset(CMAKE_REQUIRED_FLAGS)
+file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/conftest.map")
 
 if (WITH_DEBUG_CRYPTO)
   set(DEBUG_CRYPTO 1)
