@@ -85,6 +85,10 @@ static int ssh_auth_response_termination(void *user) {
         case SSH_AUTH_STATE_GSSAPI_REQUEST_SENT:
         case SSH_AUTH_STATE_GSSAPI_TOKEN:
         case SSH_AUTH_STATE_GSSAPI_MIC_SENT:
+        case SSH_AUTH_STATE_PUBKEY_AUTH_SENT:
+        case SSH_AUTH_STATE_PUBKEY_OFFER_SENT:
+        case SSH_AUTH_STATE_PASSWORD_AUTH_SENT:
+        case SSH_AUTH_STATE_AUTH_NONE_SENT:
             return 0;
         default:
             return 1;
@@ -167,6 +171,10 @@ static int ssh_userauth_get_response(ssh_session session) {
         case SSH_AUTH_STATE_GSSAPI_REQUEST_SENT:
         case SSH_AUTH_STATE_GSSAPI_TOKEN:
         case SSH_AUTH_STATE_GSSAPI_MIC_SENT:
+        case SSH_AUTH_STATE_PUBKEY_OFFER_SENT:
+        case SSH_AUTH_STATE_PUBKEY_AUTH_SENT:
+        case SSH_AUTH_STATE_PASSWORD_AUTH_SENT:
+        case SSH_AUTH_STATE_AUTH_NONE_SENT:
         case SSH_AUTH_STATE_NONE:
             /* not reached */
             rc = SSH_AUTH_ERROR;
@@ -312,24 +320,30 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_success) {
 SSH_PACKET_CALLBACK(ssh_packet_userauth_pk_ok) {
     int rc;
 
-  SSH_LOG(SSH_LOG_TRACE, "Received SSH_USERAUTH_PK_OK/INFO_REQUEST/GSSAPI_RESPONSE");
-
-  if (session->auth.state == SSH_AUTH_STATE_KBDINT_SENT) {
-    /* Assuming we are in keyboard-interactive context */
     SSH_LOG(SSH_LOG_TRACE,
-            "keyboard-interactive context, assuming SSH_USERAUTH_INFO_REQUEST");
-    rc = ssh_packet_userauth_info_request(session,type,packet,user);
-#ifdef WITH_GSSAPI
-  } else if (session->auth.state == SSH_AUTH_STATE_GSSAPI_REQUEST_SENT) {
-    rc = ssh_packet_userauth_gssapi_response(session, type, packet, user);
-#endif
-  } else {
-    session->auth.state = SSH_AUTH_STATE_PK_OK;
-    SSH_LOG(SSH_LOG_TRACE, "Assuming SSH_USERAUTH_PK_OK");
-    rc = SSH_PACKET_USED;
-  }
+            "Received SSH_USERAUTH_PK_OK/INFO_REQUEST/GSSAPI_RESPONSE");
 
-  return rc;
+    if (session->auth.state == SSH_AUTH_STATE_KBDINT_SENT) {
+        /* Assuming we are in keyboard-interactive context */
+        SSH_LOG(SSH_LOG_TRACE,
+                "keyboard-interactive context, "
+                "assuming SSH_USERAUTH_INFO_REQUEST");
+        rc = ssh_packet_userauth_info_request(session,type,packet,user);
+#ifdef WITH_GSSAPI
+    } else if (session->auth.state == SSH_AUTH_STATE_GSSAPI_REQUEST_SENT) {
+        rc = ssh_packet_userauth_gssapi_response(session, type, packet, user);
+#endif
+    } else if (session->auth.state == SSH_AUTH_STATE_PUBKEY_OFFER_SENT) {
+        session->auth.state = SSH_AUTH_STATE_PK_OK;
+        SSH_LOG(SSH_LOG_TRACE, "Assuming SSH_USERAUTH_PK_OK");
+        rc = SSH_PACKET_USED;
+    } else {
+        session->auth.state = SSH_AUTH_STATE_ERROR;
+        SSH_LOG(SSH_LOG_TRACE, "SSH_USERAUTH_PK_OK received in wrong state");
+        rc = SSH_PACKET_USED;
+    }
+
+    return rc;
 }
 
 /**
@@ -416,7 +430,7 @@ int ssh_userauth_none(ssh_session session, const char *username) {
     }
 
     session->auth.current_method = SSH_AUTH_METHOD_NONE;
-    session->auth.state = SSH_AUTH_STATE_NONE;
+    session->auth.state = SSH_AUTH_STATE_AUTH_NONE_SENT;
     session->pending_call_state = SSH_PENDING_CALL_AUTH_NONE;
     rc = ssh_packet_send(session);
     if (rc == SSH_ERROR) {
@@ -470,6 +484,7 @@ int ssh_userauth_try_publickey(ssh_session session,
                                const ssh_key pubkey)
 {
     ssh_string pubkey_s = NULL;
+    const char *sig_type_c = NULL;
     int rc;
 
     if (session == NULL) {
@@ -494,6 +509,34 @@ int ssh_userauth_try_publickey(ssh_session session,
             return SSH_ERROR;
     }
 
+    switch (pubkey->type) {
+    case SSH_KEYTYPE_UNKNOWN:
+        ssh_set_error(session,
+                      SSH_REQUEST_DENIED,
+                      "Invalid key type (unknown)");
+        return SSH_AUTH_DENIED;
+    case SSH_KEYTYPE_ECDSA:
+        sig_type_c = ssh_pki_key_ecdsa_name(pubkey);
+        break;
+    case SSH_KEYTYPE_DSS:
+    case SSH_KEYTYPE_RSA:
+    case SSH_KEYTYPE_RSA1:
+    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_DSS_CERT01:
+    case SSH_KEYTYPE_RSA_CERT01:
+        sig_type_c = ssh_key_get_signature_algorithm(session, pubkey->type);
+        break;
+    }
+
+    /* Check if the given public key algorithm is allowed */
+    if (!ssh_key_algorithm_allowed(session, sig_type_c)) {
+        ssh_set_error(session, SSH_REQUEST_DENIED,
+                      "The key algorithm '%s' is not allowed to be used by"
+                      " PUBLICKEY_ACCEPTED_TYPES configuration option",
+                      sig_type_c);
+        return SSH_AUTH_DENIED;
+    }
+
     rc = ssh_userauth_request_service(session);
     if (rc == SSH_AGAIN) {
         return SSH_AUTH_AGAIN;
@@ -514,7 +557,7 @@ int ssh_userauth_try_publickey(ssh_session session,
             "ssh-connection",
             "publickey",
             0, /* private key ? */
-            pubkey->type_c, /* algo */
+            sig_type_c, /* algo */
             pubkey_s /* public key */
             );
     if (rc < 0) {
@@ -524,7 +567,7 @@ int ssh_userauth_try_publickey(ssh_session session,
     ssh_string_free(pubkey_s);
 
     session->auth.current_method = SSH_AUTH_METHOD_PUBLICKEY;
-    session->auth.state = SSH_AUTH_STATE_NONE;
+    session->auth.state = SSH_AUTH_STATE_PUBKEY_OFFER_SENT;
     session->pending_call_state = SSH_PENDING_CALL_AUTH_OFFER_PUBKEY;
     rc = ssh_packet_send(session);
     if (rc == SSH_ERROR) {
@@ -575,7 +618,7 @@ int ssh_userauth_publickey(ssh_session session,
 {
     ssh_string str = NULL;
     int rc;
-    const char *type_c;
+    const char *sig_type_c = NULL;
     enum ssh_keytypes_e key_type;
 
     if (session == NULL) {
@@ -599,16 +642,43 @@ int ssh_userauth_publickey(ssh_session session,
             return SSH_AUTH_ERROR;
     }
 
+    /* Cert auth requires presenting the cert type name (*-cert@openssh.com) */
+    key_type = privkey->cert != NULL ? privkey->cert_type : privkey->type;
+
+    switch (key_type) {
+    case SSH_KEYTYPE_UNKNOWN:
+        ssh_set_error(session,
+                      SSH_REQUEST_DENIED,
+                      "Invalid key type (unknown)");
+        return SSH_AUTH_DENIED;
+    case SSH_KEYTYPE_ECDSA:
+        sig_type_c = ssh_pki_key_ecdsa_name(privkey);
+        break;
+    case SSH_KEYTYPE_DSS:
+    case SSH_KEYTYPE_RSA:
+    case SSH_KEYTYPE_RSA1:
+    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_DSS_CERT01:
+    case SSH_KEYTYPE_RSA_CERT01:
+        sig_type_c = ssh_key_get_signature_algorithm(session, key_type);
+        break;
+    }
+
+    /* Check if the given public key algorithm is allowed */
+    if (!ssh_key_algorithm_allowed(session, sig_type_c)) {
+        ssh_set_error(session, SSH_REQUEST_DENIED,
+                      "The key algorithm '%s' is not allowed to be used by"
+                      " PUBLICKEY_ACCEPTED_TYPES configuration option",
+                      sig_type_c);
+        return SSH_AUTH_DENIED;
+    }
+
     rc = ssh_userauth_request_service(session);
     if (rc == SSH_AGAIN) {
         return SSH_AUTH_AGAIN;
     } else if (rc == SSH_ERROR) {
         return SSH_AUTH_ERROR;
     }
-
-    /* Cert auth requires presenting the cert type name (*-cert@openssh.com) */
-    key_type = privkey->cert != NULL ? privkey->cert_type : privkey->type;
-    type_c = ssh_key_type_to_char(key_type);
 
     /* get public key or cert */
     rc = ssh_pki_export_pubkey_blob(privkey, &str);
@@ -623,7 +693,7 @@ int ssh_userauth_publickey(ssh_session session,
             "ssh-connection",
             "publickey",
             1, /* private key */
-            type_c, /* algo */
+            sig_type_c, /* algo */
             str /* public key or cert */
             );
     if (rc < 0) {
@@ -645,7 +715,7 @@ int ssh_userauth_publickey(ssh_session session,
     }
 
     session->auth.current_method = SSH_AUTH_METHOD_PUBLICKEY;
-    session->auth.state = SSH_AUTH_STATE_NONE;
+    session->auth.state = SSH_AUTH_STATE_PUBKEY_AUTH_SENT;
     session->pending_call_state = SSH_PENDING_CALL_AUTH_PUBKEY;
     rc = ssh_packet_send(session);
     if (rc == SSH_ERROR) {
@@ -672,7 +742,9 @@ static int ssh_userauth_agent_publickey(ssh_session session,
                                         const char *username,
                                         ssh_key pubkey)
 {
-    ssh_string str = NULL;
+    ssh_string pubkey_s = NULL;
+    ssh_string sig_blob = NULL;
+    const char *sig_type_c = NULL;
     int rc;
 
     switch(session->pending_call_state) {
@@ -694,11 +766,21 @@ static int ssh_userauth_agent_publickey(ssh_session session,
         return SSH_AUTH_ERROR;
     }
 
-
     /* public key */
-    rc = ssh_pki_export_pubkey_blob(pubkey, &str);
+    rc = ssh_pki_export_pubkey_blob(pubkey, &pubkey_s);
     if (rc < 0) {
         goto fail;
+    }
+    sig_type_c = ssh_key_get_signature_algorithm(session, pubkey->type);
+
+    /* Check if the given public key algorithm is allowed */
+    if (!ssh_key_algorithm_allowed(session, sig_type_c)) {
+        ssh_set_error(session, SSH_REQUEST_DENIED,
+                      "The key algorithm '%s' is not allowed to be used by"
+                      " PUBLICKEY_ACCEPTED_TYPES configuration option",
+                      sig_type_c);
+        SSH_STRING_FREE(pubkey_s);
+        return SSH_AUTH_DENIED;
     }
 
     /* request */
@@ -708,30 +790,28 @@ static int ssh_userauth_agent_publickey(ssh_session session,
             "ssh-connection",
             "publickey",
             1, /* private key */
-            pubkey->type_c, /* algo */
-            str /* public key */
+            sig_type_c, /* algo */
+            pubkey_s /* public key */
             );
+    SSH_STRING_FREE(pubkey_s);
     if (rc < 0) {
         goto fail;
     }
 
-    ssh_string_free(str);
-
     /* sign the buffer with the private key */
-    str = ssh_pki_do_sign_agent(session, session->out_buffer, pubkey);
-    if (str == NULL) {
+    sig_blob = ssh_pki_do_sign_agent(session, session->out_buffer, pubkey);
+    if (sig_blob == NULL) {
         goto fail;
     }
 
-    rc = ssh_buffer_add_ssh_string(session->out_buffer, str);
-    ssh_string_free(str);
-    str = NULL;
+    rc = ssh_buffer_add_ssh_string(session->out_buffer, sig_blob);
+    SSH_STRING_FREE(sig_blob);
     if (rc < 0) {
         goto fail;
     }
 
     session->auth.current_method = SSH_AUTH_METHOD_PUBLICKEY;
-    session->auth.state = SSH_AUTH_STATE_NONE;
+    session->auth.state = SSH_AUTH_STATE_PUBKEY_AUTH_SENT;
     session->pending_call_state = SSH_PENDING_CALL_AUTH_AGENT;
     rc = ssh_packet_send(session);
     if (rc == SSH_ERROR) {
@@ -748,7 +828,7 @@ pending:
 fail:
     ssh_set_error_oom(session);
     ssh_buffer_reinit(session->out_buffer);
-    ssh_string_free(str);
+    SSH_STRING_FREE(pubkey_s);
 
     return SSH_AUTH_ERROR;
 }
@@ -1192,7 +1272,7 @@ int ssh_userauth_password(ssh_session session,
     }
 
     session->auth.current_method = SSH_AUTH_METHOD_PASSWORD;
-    session->auth.state = SSH_AUTH_STATE_NONE;
+    session->auth.state = SSH_AUTH_STATE_PASSWORD_AUTH_SENT;
     session->pending_call_state = SSH_PENDING_CALL_AUTH_PASSWORD;
     rc = ssh_packet_send(session);
     if (rc == SSH_ERROR) {
@@ -1514,7 +1594,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_info_request) {
         return SSH_PACKET_USED;
     }
 
-    session->kbdint->echo = malloc(nprompts);
+    session->kbdint->echo = calloc(nprompts, sizeof(unsigned char));
     if (session->kbdint->echo == NULL) {
         session->kbdint->nprompts = 0;
         ssh_set_error_oom(session);
@@ -1523,7 +1603,6 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_info_request) {
 
         return SSH_PACKET_USED;
     }
-    memset(session->kbdint->echo, 0, nprompts);
 
     for (i = 0; i < nprompts; i++) {
         rc = ssh_buffer_unpack(packet, "sb",

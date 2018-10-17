@@ -43,6 +43,12 @@ enum ssh_packet_state_e {
   PACKET_STATE_PROCESSING
 };
 
+enum ssh_packet_filter_result_e {
+    SSH_PACKET_UNKNOWN,
+    SSH_PACKET_ALLOWED,
+    SSH_PACKET_DENIED
+};
+
 int ssh_packet_send(ssh_session session);
 
 SSH_PACKET_CALLBACK(ssh_packet_unimplemented);
@@ -51,6 +57,7 @@ SSH_PACKET_CALLBACK(ssh_packet_ignore_callback);
 SSH_PACKET_CALLBACK(ssh_packet_dh_reply);
 SSH_PACKET_CALLBACK(ssh_packet_newkeys);
 SSH_PACKET_CALLBACK(ssh_packet_service_accept);
+SSH_PACKET_CALLBACK(ssh_packet_ext_info);
 
 #ifdef WITH_SERVER
 SSH_PACKET_CALLBACK(ssh_packet_kexdh_init);
