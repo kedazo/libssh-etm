@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.3.0)
-cmake_policy(SET CMP0048 NEW)
+cmake_minimum_required(VERSION 2.8.0)
+#cmake_policy(SET CMP0048 NEW)
 
 # Specify search path for CMake modules to be loaded by include() 
 # and find_package()
@@ -10,7 +10,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(DefineCMakeDefaults)
 include(DefineCompilerFlags)
 
-project(libssh VERSION 0.8.4 LANGUAGES C)
+project(libssh LANGUAGES C)
 
 # global needed variable
 set(APPLICATION_NAME ${PROJECT_NAME})
