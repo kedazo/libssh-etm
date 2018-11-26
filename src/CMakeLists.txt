@@ -102,7 +102,7 @@ set(LIBSSH_LINK_LIBRARIES
 )
 
 set(LIBSSH_LIBRARY_NAME
-  ${LIBSSH_LIBRARY_NAME}
+  ssh
   CACHE INTERNAL "libssh library name"
 )
 

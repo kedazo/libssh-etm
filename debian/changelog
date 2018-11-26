@@ -1,3 +1,73 @@
+libssh (0.8.5-0up10) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:41:13 +0100
+
+libssh (0.8.5-0up9) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:41:12 +0100
+
+libssh (0.8.5-0up8) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:33:41 +0100
+
+libssh (0.8.5-0up7) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:33:40 +0100
+
+libssh (0.8.5-0up6) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:32:37 +0100
+
+libssh (0.8.5-0up5) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:32:36 +0100
+
+libssh (0.8.5-0up4) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:31:07 +0100
+
+libssh (0.8.5-0up3) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:31:06 +0100
+
+libssh (0.8.5-0up2) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:30:49 +0100
+
+libssh (0.8.5-0up1) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:30:48 +0100
+
 libssh (0.8.5-0up0) UNRELEASED; urgency=medium
 
   * Version bump
