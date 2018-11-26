@@ -102,7 +102,7 @@ set(LIBSSH_LINK_LIBRARIES
 )
 
 set(LIBSSH_LIBRARY_NAME
-  ssh
+  ${LIBSSH_LIBRARY_NAME}
   CACHE INTERNAL "libssh library name"
 )
 
@@ -323,7 +323,7 @@ set_target_properties(
       SOVERSION
         ${LIBRARY_SOVERSION}
       OUTPUT_NAME
-        ${LIBSSH_LIBRARY_NAME}
+        ssh
       DEFINE_SYMBOL
         LIBSSH_EXPORTS
 )
