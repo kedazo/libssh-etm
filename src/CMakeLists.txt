@@ -323,7 +323,7 @@ set_target_properties(
       SOVERSION
         ${LIBRARY_SOVERSION}
       OUTPUT_NAME
-        ssh
+        ${LIBSSH_LIBRARY_NAME}
       DEFINE_SYMBOL
         LIBSSH_EXPORTS
 )
