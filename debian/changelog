@@ -1,3 +1,23 @@
+libssh (0.8.5-0up0) UNRELEASED; urgency=medium
+
+  * Version bump
+
+ -- David Kedves <kedazo@severalnines.com>  Mon, 26 Nov 2018 16:30:19 +0100
+
+libssh (0.8.4-0up6) xenial; urgency=medium
+
+  * Team upload.
+  * xenial packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:12:57 +0100
+
+libssh (0.8.4-0up5) bionic; urgency=medium
+
+  * Team upload.
+  * bionic packaging
+
+ -- David Kedves <david.kedves@borgcollective.eu>  Mon, 26 Nov 2018 16:12:56 +0100
+
 libssh (0.8.4-0up4) xenial; urgency=medium
 
   * Team upload.
