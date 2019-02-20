@@ -129,6 +129,33 @@ static void torture_packet(const char *cipher,
     ssh_free(session);
 }
 
+static void torture_packet_aes128_ctr_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("aes128-ctr", "hmac-sha1-etm@openssh.com", i);
+    }
+}
+
+static void torture_packet_aes192_ctr_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("aes192-ctr", "hmac-sha1-etm@openssh.com", i);
+    }
+}
+
+static void torture_packet_aes256_ctr_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("aes256-ctr", "hmac-sha1-etm@openssh.com", i);
+    }
+}
+
 static void torture_packet_aes128_ctr(void **state)
 {
     int i;
@@ -183,12 +210,48 @@ static void torture_packet_aes256_cbc(void **state)
     }
 }
 
+static void torture_packet_aes128_cbc_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("aes128-cbc", "hmac-sha1-etm@openssh.com", i);
+    }
+}
+
+static void torture_packet_aes192_cbc_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("aes192-cbc", "hmac-sha1-etm@openssh.com", i);
+    }
+}
+
+static void torture_packet_aes256_cbc_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("aes256-cbc", "hmac-sha1-etm@openssh.com", i);
+    }
+}
+
 static void torture_packet_3des_cbc(void **state)
 {
     int i;
     (void)state; /* unused */
     for (i=1;i<256;++i){
         torture_packet("3des-cbc","hmac-sha1",i);
+    }
+}
+
+static void torture_packet_3des_cbc_etm(void **state)
+{
+    int i;
+    (void)state; /* unused */
+    for (i=1;i<256;++i){
+        torture_packet("3des-cbc", "hmac-sha1-etm@openssh.com", i);
     }
 }
 
@@ -207,10 +270,17 @@ int torture_run_tests(void) {
         cmocka_unit_test(torture_packet_aes128_ctr),
         cmocka_unit_test(torture_packet_aes192_ctr),
         cmocka_unit_test(torture_packet_aes256_ctr),
+        cmocka_unit_test(torture_packet_aes128_ctr_etm),
+        cmocka_unit_test(torture_packet_aes192_ctr_etm),
+        cmocka_unit_test(torture_packet_aes256_ctr_etm),
         cmocka_unit_test(torture_packet_aes128_cbc),
         cmocka_unit_test(torture_packet_aes192_cbc),
         cmocka_unit_test(torture_packet_aes256_cbc),
+        cmocka_unit_test(torture_packet_aes128_cbc_etm),
+        cmocka_unit_test(torture_packet_aes192_cbc_etm),
+        cmocka_unit_test(torture_packet_aes256_cbc_etm),
         cmocka_unit_test(torture_packet_3des_cbc),
+        cmocka_unit_test(torture_packet_3des_cbc_etm),
         cmocka_unit_test(torture_packet_chacha20)
     };
 

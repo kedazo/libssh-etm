@@ -47,6 +47,7 @@
 #include "libssh/kex.h"
 #include "libssh/auth.h"
 #include "libssh/gssapi.h"
+#include "libssh/bytearray.h"
 
 static ssh_packet_callback default_packet_handlers[]= {
   ssh_packet_disconnect_callback,          // SSH2_MSG_DISCONNECT                 1
@@ -939,10 +940,8 @@ end:
 int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
 {
     ssh_session session= (ssh_session) user;
-    unsigned int blocksize = (session->current_crypto ?
-                              session->current_crypto->in_cipher->blocksize : 8);
-    unsigned int lenfield_blocksize = (session->current_crypto ?
-                                  session->current_crypto->in_cipher->lenfield_blocksize : 8);
+    unsigned int blocksize = 8;
+    unsigned int lenfield_blocksize = 8;
     size_t current_macsize = 0;
     uint8_t *ptr = NULL;
     int to_be_read;
@@ -955,11 +954,26 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
     uint8_t padding;
     size_t processed = 0; /* number of byte processed from the callback */
     enum ssh_packet_filter_result_e filter_result;
+    struct ssh_crypto_struct *crypto = NULL;
+    int etm = 0;
+    int etm_packet_offset = 0;
 
-    if(session->current_crypto != NULL) {
-      current_macsize = hmac_digest_len(session->current_crypto->in_hmac);
+    crypto = session->current_crypto;
+    if (crypto != NULL) {
+        current_macsize = hmac_digest_len(crypto->in_hmac);
+        blocksize = crypto->in_cipher->blocksize;
+        lenfield_blocksize = crypto->in_cipher->lenfield_blocksize;
+        etm = crypto->in_hmac_etm;
     }
-    if (lenfield_blocksize == 0) {
+
+    if (etm) {
+        /* In EtM mode packet size is unencrypted. This means
+         * we need to use this offset and set the block size
+         * that is part of the encrypted part to 0.
+         */
+        etm_packet_offset = sizeof(uint32_t);
+        lenfield_blocksize = 0;
+    } else if (lenfield_blocksize == 0) {
         lenfield_blocksize = blocksize;
     }
     if (data == NULL) {
@@ -982,10 +996,10 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
 #endif
     switch(session->packet_state) {
         case PACKET_STATE_INIT:
-            if (receivedlen < lenfield_blocksize) {
+            if (receivedlen < lenfield_blocksize + etm_packet_offset) {
                 /*
-                 * We didn't receive enough data to read at least one
-                 * block size, give up
+                 * We didn't receive enough data to read either at least one
+                 * block size or the unencrypted length in EtM mode.
                  */
 #ifdef DEBUG_PACKET
                 SSH_LOG(SSH_LOG_PACKET,
@@ -1012,13 +1026,20 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
                 }
             }
 
-            ptr = ssh_buffer_allocate(session->in_buffer, lenfield_blocksize);
-            if (ptr == NULL) {
-                goto error;
+            if (!etm) {
+                ptr = ssh_buffer_allocate(session->in_buffer, lenfield_blocksize);
+                if (ptr == NULL) {
+                    goto error;
+                }
+                packet_len = ssh_packet_decrypt_len(session, ptr, (uint8_t *)data);
+                to_be_read = packet_len - lenfield_blocksize + sizeof(uint32_t);
+            } else {
+                /* Length is unencrypted in case of Encrypt-then-MAC */
+                packet_len = PULL_BE_U32(data, 0);
+                to_be_read = packet_len - etm_packet_offset;
             }
-            processed += lenfield_blocksize;
-            packet_len = ssh_packet_decrypt_len(session, ptr, (uint8_t *)data);
 
+            processed += lenfield_blocksize + etm_packet_offset;
             if (packet_len > MAX_PACKET_LEN) {
                 ssh_set_error(session,
                               SSH_FATAL,
@@ -1026,7 +1047,6 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
                               packet_len, packet_len);
                 goto error;
             }
-            to_be_read = packet_len - lenfield_blocksize + sizeof(uint32_t);
             if (to_be_read < 0) {
                 /* remote sshd sends invalid sizes? */
                 ssh_set_error(session,
@@ -1041,7 +1061,7 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
             FALL_THROUGH;
         case PACKET_STATE_SIZEREAD:
             packet_len = session->in_packet.len;
-            processed = lenfield_blocksize;
+            processed = lenfield_blocksize + etm_packet_offset;
             to_be_read = packet_len + sizeof(uint32_t) + current_macsize;
             /* if to_be_read is zero, the whole packet was blocksize bytes. */
             if (to_be_read != 0) {
@@ -1056,45 +1076,73 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
                     return 0;
                 }
 
-                packet_second_block = (uint8_t*)data + lenfield_blocksize;
+                packet_second_block = (uint8_t*)data + lenfield_blocksize + etm_packet_offset;
                 processed = to_be_read - current_macsize;
             }
 
             /* remaining encrypted bytes from the packet, MAC not included */
             packet_remaining =
-                packet_len - (lenfield_blocksize - sizeof(uint32_t));
+                packet_len - (lenfield_blocksize - sizeof(uint32_t) + etm_packet_offset);
             cleartext_packet = ssh_buffer_allocate(session->in_buffer,
                                                    packet_remaining);
-            if (session->current_crypto) {
-                /*
-                 * Decrypt the rest of the packet (lenfield_blocksize bytes already
-                 * have been decrypted)
-                 */
-                if (packet_remaining > 0) {
-                    rc = ssh_packet_decrypt(session,
-                                            cleartext_packet,
-                                            (uint8_t *)data,
-                                            lenfield_blocksize,
-                                            processed - lenfield_blocksize);
-                    if (rc < 0) {
-                        ssh_set_error(session, SSH_FATAL, "Decryption error");
-                        goto error;
-                    }
-                }
-                mac = packet_second_block + packet_remaining;
+            if (cleartext_packet == NULL) {
+                goto error;
+            }
 
-                rc = ssh_packet_hmac_verify(session, session->in_buffer, mac, session->current_crypto->in_hmac);
-                if (rc < 0) {
-                    ssh_set_error(session, SSH_FATAL, "HMAC error");
-                    goto error;
+            if (packet_second_block != NULL) {
+                if (crypto != NULL) {
+                    mac = packet_second_block + packet_remaining;
+
+                    if (etm) {
+                        rc = ssh_packet_hmac_verify(session,
+                                                    data,
+                                                    processed,
+                                                    mac,
+                                                    crypto->in_hmac);
+                        if (rc < 0) {
+                            ssh_set_error(session, SSH_FATAL, "HMAC error");
+                            goto error;
+                        }
+                    }
+                    /*
+                     * Decrypt the rest of the packet (lenfield_blocksize bytes
+                     * already have been decrypted)
+                     */
+                    if (packet_remaining > 0) {
+                        rc = ssh_packet_decrypt(session,
+                                                cleartext_packet,
+                                                (uint8_t *)data,
+                                                lenfield_blocksize + etm_packet_offset,
+                                                processed - (lenfield_blocksize + etm_packet_offset));
+                        if (rc < 0) {
+                            ssh_set_error(session,
+                                          SSH_FATAL,
+                                          "Decryption error");
+                            goto error;
+                        }
+                    }
+
+                    if (!etm) {
+                        rc = ssh_packet_hmac_verify(session,
+                                                    ssh_buffer_get(session->in_buffer),
+                                                    ssh_buffer_get_len(session->in_buffer),
+                                                    mac,
+                                                    crypto->in_hmac);
+                        if (rc < 0) {
+                            ssh_set_error(session, SSH_FATAL, "HMAC error");
+                            goto error;
+                        }
+                    }
                 }
                 processed += current_macsize;
             } else {
                 memcpy(cleartext_packet, packet_second_block, packet_remaining);
             }
 
-            /* skip the size field which has been processed before */
-            ssh_buffer_pass_bytes(session->in_buffer, sizeof(uint32_t));
+            if (!etm) {
+                /* skip the size field which has been processed before */
+                ssh_buffer_pass_bytes(session->in_buffer, sizeof(uint32_t));
+            }
 
             rc = ssh_buffer_get_u8(session->in_buffer, &padding);
             if (rc == 0) {
@@ -1361,22 +1409,38 @@ static int ssh_packet_write(ssh_session session) {
   return rc;
 }
 
-static int packet_send2(ssh_session session) {
-  unsigned int blocksize = (session->current_crypto ?
-      session->current_crypto->out_cipher->blocksize : 8);
-  unsigned int lenfield_blocksize = (session->current_crypto ?
-      session->current_crypto->out_cipher->lenfield_blocksize : 0);
-  enum ssh_hmac_e hmac_type = (session->current_crypto ?
-      session->current_crypto->out_hmac : session->next_crypto->out_hmac);
-  uint32_t currentlen = ssh_buffer_get_len(session->out_buffer);
-  unsigned char *hmac = NULL;
-  char padstring[32] = { 0 };
-  int rc = SSH_ERROR;
-  uint32_t finallen,payloadsize,compsize;
-  uint8_t padding;
-  ssh_buffer header_buffer = ssh_buffer_new();
+static int packet_send2(ssh_session session)
+{
+    unsigned int blocksize = 8;
+    unsigned int lenfield_blocksize = 0;
+    enum ssh_hmac_e hmac_type;
+    uint32_t currentlen = ssh_buffer_get_len(session->out_buffer);
+    struct ssh_crypto_struct *crypto = NULL;
+    unsigned char *hmac = NULL;
+    uint8_t padding_data[32] = { 0 };
+    uint8_t padding_size;
+    uint32_t finallen, payloadsize, compsize;
+    uint8_t header[5] = {0};
+    int rc = SSH_ERROR;
+    int etm = 0;
+    int etm_packet_offset = 0;
 
-  payloadsize = currentlen;
+    crypto = session->current_crypto;
+    if (crypto) {
+        blocksize = crypto->out_cipher->blocksize;
+        lenfield_blocksize = crypto->out_cipher->lenfield_blocksize;
+        hmac_type = crypto->out_hmac;
+        etm = crypto->out_hmac_etm;
+    } else {
+        hmac_type = session->next_crypto->out_hmac;
+    }
+
+    payloadsize = currentlen;
+    if (etm) {
+        etm_packet_offset = sizeof(uint32_t);
+        lenfield_blocksize = 0;
+    }
+
 #ifdef WITH_ZLIB
   if (session->current_crypto
       && session->current_crypto->do_compress_out
@@ -1387,44 +1451,41 @@ static int packet_send2(ssh_session session) {
     currentlen = ssh_buffer_get_len(session->out_buffer);
   }
 #endif /* WITH_ZLIB */
-  compsize = currentlen;
-  /* compressed payload + packet len (4) + padding len (1) */
-  /* totallen - lenfield_blocksize must be equal to 0 (mod blocksize) */
-  padding = (blocksize - ((blocksize - lenfield_blocksize + currentlen + 5) % blocksize));
-  if(padding < 4) {
-    padding += blocksize;
-  }
+    compsize = currentlen;
+    /* compressed payload + packet len (4) + padding_size len (1) */
+    /* totallen - lenfield_blocksize must be equal to 0 (mod blocksize) */
+    padding_size = (blocksize - ((blocksize - lenfield_blocksize - etm_packet_offset + currentlen + 5) % blocksize));
+    if (padding_size < 4) {
+        padding_size += blocksize;
+    }
 
-  if (session->current_crypto != NULL) {
-      int ok;
+    if (crypto != NULL) {
+        int ok;
 
-      ok = ssh_get_random(padstring, padding, 0);
-      if (!ok) {
-          ssh_set_error(session, SSH_FATAL, "PRNG error");
-          goto error;
-      }
-  }
+        ok = ssh_get_random(padding_data, padding_size, 0);
+        if (!ok) {
+            ssh_set_error(session, SSH_FATAL, "PRNG error");
+            goto error;
+        }
+    }
 
-  if (header_buffer == NULL){
-    ssh_set_error_oom(session);
-    goto error;
-  }
-  finallen = currentlen + padding + 1;
-  rc = ssh_buffer_pack(header_buffer, "db", finallen, padding);
-  if (rc == SSH_ERROR){
-    goto error;
-  }
+   finallen = currentlen - etm_packet_offset + padding_size + 1; 
 
-  rc = ssh_buffer_prepend_data(session->out_buffer,
-                               ssh_buffer_get(header_buffer),
-                               ssh_buffer_get_len(header_buffer));
-  if (rc < 0) {
-    goto error;
-  }
-  rc = ssh_buffer_add_data(session->out_buffer, padstring, padding);
-  if (rc < 0) {
-    goto error;
-  }
+    PUSH_BE_U32(header, 0, finallen);
+    PUSH_BE_U8(header, 4, padding_size);
+
+    rc = ssh_buffer_prepend_data(session->out_buffer,
+                                 header,
+                                 sizeof(header));
+    if (rc < 0) { 
+        goto error;
+    }    
+
+    rc = ssh_buffer_add_data(session->out_buffer, padding_data, padding_size);
+    if (rc < 0) { 
+        goto error;
+    }    
+
 #ifdef WITH_PCAP
   if (session->pcap_ctx) {
       ssh_pcap_context_write(session->pcap_ctx,
@@ -1451,15 +1512,12 @@ static int packet_send2(ssh_session session) {
   }
 
   SSH_LOG(SSH_LOG_PACKET,
-          "packet: wrote [len=%d,padding=%hhd,comp=%d,payload=%d]",
-          finallen, padding, compsize, payloadsize);
+          "packet: wrote [len=%d,padding_size=%hhd,comp=%d,payload=%d]",
+          finallen, padding_size, compsize, payloadsize);
   if (ssh_buffer_reinit(session->out_buffer) < 0) {
     rc = SSH_ERROR;
   }
 error:
-  if (header_buffer != NULL) {
-      ssh_buffer_free(header_buffer);
-  }
   return rc; /* SSH_OK, AGAIN or ERROR */
 }
 

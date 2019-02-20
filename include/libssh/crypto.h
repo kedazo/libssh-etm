@@ -112,6 +112,7 @@ struct ssh_crypto_struct {
     unsigned char hmacbuf[DIGEST_MAX_LEN];
     struct ssh_cipher_struct *in_cipher, *out_cipher; /* the cipher structures/objects */
     enum ssh_hmac_e in_hmac, out_hmac; /* the MAC algorithms used */
+    int in_hmac_etm, out_hmac_etm; /* Whether EtM mode is used or not */
 
     ssh_key server_pubkey;
     int do_compress_out; /* idem */
