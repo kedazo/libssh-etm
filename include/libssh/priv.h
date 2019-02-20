@@ -78,6 +78,10 @@ char *strndup(const char *s, size_t n);
 #  endif /* __WORDSIZE */
 # endif /* PRIu64 */
 
+# ifndef PRIu32
+#  define PRIu32 "u"
+# endif /* PRIu32 */
+
 # ifdef _MSC_VER
 #  include <stdio.h>
 #  include <stdarg.h> /* va_copy define check */
@@ -385,6 +389,22 @@ void explicit_bzero(void *s, size_t n);
 #  define FALL_THROUGH
 # endif /* HAVE_FALLTHROUGH_ATTRIBUTE */
 #endif /* FALL_THROUGH */
+
+#ifndef __unused__
+# ifdef HAVE_UNUSED_ATTRIBUTE
+#  define __unused__ __attribute__((unused))
+# else /* HAVE_UNUSED_ATTRIBUTE */
+#  define __unused__
+# endif /* HAVE_UNUSED_ATTRIBUTE */
+#endif /* __unused__ */
+
+#ifndef UNUSED_PARAM
+#define UNUSED_PARAM(param) param __unused__
+#endif /* UNUSED_PARAM */
+
+#ifndef UNUSED_VAR
+#define UNUSED_VAR(var) __unused__ var
+#endif /* UNUSED_VAR */
 
 void ssh_agent_state_free(void *data);
 

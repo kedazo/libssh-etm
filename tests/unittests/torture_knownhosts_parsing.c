@@ -8,6 +8,15 @@
 
 #include "knownhosts.c"
 
+#if (defined _WIN32) || (defined _WIN64)
+#ifndef S_IRWXO
+#define S_IRWXO 0
+#endif
+#ifndef S_IRWXG
+#define S_IRWXG 0
+#endif
+#endif
+
 #define LOCALHOST_RSA_LINE "localhost,127.0.0.1 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDD7g+vV5cvxxGN0Ldmda4WZCPgRaxV1tV+1KRZoGUNUI61h0X4bmmGaAPRQBCz4G1d9bawqDqEqnpFWazrxBU5cQtISSjzuDJKovLGliky/ShTszee1Thszg3qVNk9gGOWj7jn/HDaOxRlp003Bp47MOdnMnK/oftllFDfY2fF5IRpE6sSIGtg2ZDtF95TV5/9W2oMOIAy8u/83tuibYlNPa1X/von5LgdaPLn6Bk16bQKIhAhlMtFZH8MBYEWe4ZtOGaSWKOsK9MM/RTMlwPi6PkfoHNl4MCMupjx+CdLXwbQEt9Ww+bBIaCui2VWBEiruVbIgJh0W2Tal0e2BzYZ What a Wurst!"
 #define LOCALHOST_ECDSA_SHA1_NISTP256_LINE "localhost ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFWmI0n0Tn5+zR7pPGcKYszRbJ/T0T3QfzRBSMMiyebGKRY8tjkU5h2l/UMugzOrOyWqMGQDgQn+a0aMunhKMg0="
 #define LOCALHOST_DEFAULT_ED25519 "localhost ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA7M22fXD7OiS7kGMXP+OoIjCa+J+5sq8SgAZfIOmDgM"
@@ -22,37 +31,29 @@ static int setup_knownhosts_file(void **state)
     char *tmp_file = NULL;
     size_t nwritten;
     FILE *fp = NULL;
-    mode_t mask;
-    int fd;
+    int rc = 0;
 
-    tmp_file = strdup(TMP_FILE_NAME);
+    tmp_file = torture_create_temp_file(TMP_FILE_NAME);
     assert_non_null(tmp_file);
+
     *state = tmp_file;
 
-    mask = umask(S_IRWXO | S_IRWXG);
-    fd = mkstemp(tmp_file);
-    umask(mask);
-    assert_return_code(fd, errno);
-
-    fp = fdopen(fd, "w");
-    if (fp == NULL) {
-        close(fd);
-        return -1;
-    }
+    fp = fopen(tmp_file, "w");
+    assert_non_null(fp);
 
     nwritten = fwrite(LOCALHOST_PATTERN_ED25519,
                       sizeof(char),
                       strlen(LOCALHOST_PATTERN_ED25519),
                       fp);
     if (nwritten != strlen(LOCALHOST_PATTERN_ED25519)) {
-        fclose(fp);
-        return -1;
+        rc = -1;
+        goto close_fp;
     }
 
     nwritten = fwrite("\n", sizeof(char), 1, fp);
     if (nwritten != 1) {
-        fclose(fp);
-        return -1;
+        rc = -1;
+        goto close_fp;
     }
 
     nwritten = fwrite(LOCALHOST_RSA_LINE,
@@ -60,13 +61,14 @@ static int setup_knownhosts_file(void **state)
                       strlen(LOCALHOST_RSA_LINE),
                       fp);
     if (nwritten != strlen(LOCALHOST_RSA_LINE)) {
-        fclose(fp);
-        return -1;
+        rc = -1;
+        goto close_fp;
     }
 
+close_fp:
     fclose(fp);
 
-    return 0;
+    return rc;
 }
 
 static int teardown_knownhosts_file(void **state)
@@ -310,8 +312,9 @@ torture_knownhosts_algorithms(void **state)
     const char *knownhosts_file = *state;
     char *algo_list = NULL;
     ssh_session session;
-    const char *expect = "ssh-ed25519,ssh-rsa,ecdsa-sha2-nistp521,"
-                         "ecdsa-sha2-nistp384,ecdsa-sha2-nistp256"
+    const char *expect = "ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa,"
+                         "ecdsa-sha2-nistp521,ecdsa-sha2-nistp384,"
+                         "ecdsa-sha2-nistp256"
 #ifdef HAVE_DSA
                          ",ssh-dss"
 #endif
@@ -339,8 +342,9 @@ torture_knownhosts_algorithms_global(void **state)
     const char *knownhosts_file = *state;
     char *algo_list = NULL;
     ssh_session session;
-    const char *expect = "ssh-ed25519,ssh-rsa,ecdsa-sha2-nistp521,"
-                         "ecdsa-sha2-nistp384,ecdsa-sha2-nistp256"
+    const char *expect = "ssh-ed25519,rsa-sha2-512,rsa-sha2-256,ssh-rsa,"
+                         "ecdsa-sha2-nistp521,ecdsa-sha2-nistp384,"
+                         "ecdsa-sha2-nistp256"
 #ifdef HAVE_DSA
                          ",ssh-dss"
 #endif

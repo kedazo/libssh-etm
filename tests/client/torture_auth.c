@@ -37,7 +37,7 @@
 
 static int sshd_setup(void **state)
 {
-    torture_setup_sshd_server(state);
+    torture_setup_sshd_server(state, true);
 
     return 0;
 }
@@ -52,12 +52,24 @@ static int session_setup(void **state)
 {
     struct torture_state *s = *state;
     int verbosity = torture_libssh_verbosity();
+    struct passwd *pwd;
+    bool b = false;
+    int rc;
+
+    pwd = getpwnam("bob");
+    assert_non_null(pwd);
+
+    rc = setuid(pwd->pw_uid);
+    assert_return_code(rc, errno);
 
     s->ssh.session = ssh_new();
     assert_non_null(s->ssh.session);
 
     ssh_options_set(s->ssh.session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
     ssh_options_set(s->ssh.session, SSH_OPTIONS_HOST, TORTURE_SSH_SERVER);
+    /* Make sure no other configuration options from system will get used */
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_PROCESS_CONFIG, &b);
+    assert_ssh_return_code(s->ssh.session, rc);
 
     return 0;
 }
@@ -75,18 +87,11 @@ static int session_teardown(void **state)
 static int pubkey_setup(void **state)
 {
     int rc;
-    struct passwd *pwd;
 
     rc = session_setup(state);
     if (rc != 0) {
         return rc;
     }
-
-    pwd = getpwnam("bob");
-    assert_non_null(pwd);
-
-    rc = setuid(pwd->pw_uid);
-    assert_return_code(rc, errno);
 
     /* Make sure we do not interfere with another ssh-agent */
     unsetenv("SSH_AUTH_SOCK");

@@ -476,7 +476,7 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
     fd_set *readfds, struct timeval *timeout) {
   fd_set origfds;
   socket_t fd;
-  int i,j;
+  size_t i, j;
   int rc;
   int base_tm, tm;
   struct ssh_timestamp ts;
@@ -488,6 +488,7 @@ int ssh_select(ssh_channel *channels, ssh_channel *outchannels, socket_t maxfd,
     ssh_event_add_session(event, channels[i]->session);
   }
 
+  ZERO_STRUCT(origfds);
   FD_ZERO(&origfds);
   for (fd = 0; fd < maxfd ; fd++) {
       if (FD_ISSET(fd, readfds)) {

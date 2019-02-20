@@ -29,10 +29,10 @@ static void torture_pki_keytype(void **state) {
     assert_true(type == SSH_KEYTYPE_UNKNOWN);
 
     type_c = ssh_key_type_to_char(SSH_KEYTYPE_UNKNOWN);
-    assert_true(type_c == NULL);
+    assert_null(type_c);
 
     type_c = ssh_key_type_to_char(42);
-    assert_true(type_c == NULL);
+    assert_null(type_c);
 }
 
 static void torture_pki_signature(void **state)
@@ -42,7 +42,7 @@ static void torture_pki_signature(void **state)
     (void) state; /* unused */
 
     sig = ssh_signature_new();
-    assert_true(sig != NULL);
+    assert_non_null(sig);
 
     ssh_signature_free(sig);
 }
@@ -134,7 +134,7 @@ static void torture_pki_verify_mismatch(void **state)
         }
         rc = ssh_pki_generate(sig_type, key_sizes[sig_type], &key);
         assert_true(rc == SSH_OK);
-        assert_true(key != NULL);
+        assert_non_null(key);
         assert_int_equal(key->type, sig_type);
         assert_string_equal(key->type_c, key_types[sig_type]);
 
@@ -149,7 +149,7 @@ static void torture_pki_verify_mismatch(void **state)
 
             /* Create a valid signature using this key */
             sign = pki_do_sign_hash(key, HASH, hash_length, hash);
-            assert_true(sign != NULL);
+            assert_non_null(sign);
             assert_int_equal(sign->type, key->type);
             if (hash == SSH_DIGEST_AUTO) {
                 assert_string_equal(sign->type_c, key->type_c);
@@ -185,76 +185,75 @@ static void torture_pki_verify_mismatch(void **state)
                                       hash_length);
             assert_true(rc == SSH_OK);
 
-            /* XXX Test all the hash versions only with RSA.
-             * This also skips the cleanup for the last hash so we can use the
-             * created signatures later on
-             */
-            if (sig_type != SSH_KEYTYPE_RSA || hash == SSH_DIGEST_SHA512) {
-                break;
-            }
-            ssh_string_free(blob);
-            ssh_signature_free(sign);
-            ssh_signature_free(import_sig);
-        }
+            for (key_type = first_key;
+                 key_type <= SSH_KEYTYPE_ED25519;
+                 key_type++) {
+                if (key_type == SSH_KEYTYPE_RSA1) {
+                    continue;
+                }
+                SSH_LOG(SSH_LOG_TRACE, "Trying key %d with signature %d",
+                        key_type, sig_type);
 
-        for (key_type = first_key;
-             key_type <= SSH_KEYTYPE_ED25519;
-             key_type++) {
-            if (key_type == SSH_KEYTYPE_RSA1) {
-                continue;
-            }
-            SSH_LOG(SSH_LOG_TRACE, "Trying key %d with signature %d",
-                    key_type, sig_type);
+                rc = ssh_pki_generate(key_type, key_sizes[key_type], &verify_key);
+                assert_true(rc == SSH_OK);
+                assert_non_null(verify_key);
 
-            rc = ssh_pki_generate(key_type, key_sizes[key_type], &verify_key);
-            assert_true(rc == SSH_OK);
-            assert_true(verify_key != NULL);
-
-            /* Should gradefully fail, but not crash */
-            rc = pki_signature_verify(session,
-                                      sign,
-                                      verify_key,
-                                      HASH,
-                                      hash_length);
-            assert_true(rc != SSH_OK);
-
-            /* Try the same with the imported signature */
-            rc = pki_signature_verify(session,
-                                      import_sig,
-                                      verify_key,
-                                      HASH,
-                                      hash_length);
-            assert_true(rc != SSH_OK);
-
-            /* Try to import the signature blob with different key */
-            new_sig = pki_signature_from_blob(verify_key,
-                                              blob,
-                                              sig_type,
-                                              SSH_DIGEST_SHA1);
-            if (sig_type != key_type) {
-                assert_true(new_sig == NULL);
-            } else {
-                /* Importing with the same key type should work */
-                assert_true(new_sig != NULL);
-                assert_int_equal(new_sig->type, key->type);
-                assert_string_equal(new_sig->type_c, key->type_c);
-                assert_string_equal(new_sig->type_c, signature_types[sig_type]);
-
-                /* The verificaiton should not work */
+                /* Should gracefully fail, but not crash */
                 rc = pki_signature_verify(session,
-                                          new_sig,
+                                          sign,
                                           verify_key,
                                           HASH,
                                           hash_length);
                 assert_true(rc != SSH_OK);
 
-                ssh_signature_free(new_sig);
+                /* Try the same with the imported signature */
+                rc = pki_signature_verify(session,
+                                          import_sig,
+                                          verify_key,
+                                          HASH,
+                                          hash_length);
+                assert_true(rc != SSH_OK);
+
+                /* Try to import the signature blob with different key */
+                new_sig = pki_signature_from_blob(verify_key,
+                                                  blob,
+                                                  sig_type,
+                                                  import_sig->hash_type);
+                if (sig_type != key_type) {
+                    assert_null(new_sig);
+                } else {
+                    /* Importing with the same key type should work */
+                    assert_non_null(new_sig);
+                    assert_int_equal(new_sig->type, key->type);
+                    if (key_type == SSH_KEYTYPE_RSA && new_sig->hash_type != SSH_DIGEST_AUTO) {
+                        assert_string_equal(new_sig->type_c, hash_signatures[new_sig->hash_type]);
+                    } else {
+                        assert_string_equal(new_sig->type_c, key->type_c);
+                        assert_string_equal(new_sig->type_c, signature_types[sig_type]);
+                    }
+                    /* The verification should not work */
+                    rc = pki_signature_verify(session,
+                                              new_sig,
+                                              verify_key,
+                                              HASH,
+                                              hash_length);
+                    assert_true(rc != SSH_OK);
+
+                    ssh_signature_free(new_sig);
+                }
+                SSH_KEY_FREE(verify_key);
             }
-            SSH_KEY_FREE(verify_key);
+
+            ssh_string_free(blob);
+            ssh_signature_free(sign);
+            ssh_signature_free(import_sig);
+
+            /* XXX Test all the hash versions only with RSA. */
+            if (sig_type != SSH_KEYTYPE_RSA || hash == SSH_DIGEST_SHA512) {
+                break;
+            }
         }
-        ssh_string_free(blob);
-        ssh_signature_free(sign);
-        ssh_signature_free(import_sig);
+
         SSH_KEY_FREE(key);
         key = NULL;
     }

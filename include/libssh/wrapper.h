@@ -47,7 +47,8 @@ enum ssh_hmac_e {
   SSH_HMAC_SHA384,
   SSH_HMAC_SHA512,
   SSH_HMAC_MD5,
-  SSH_HMAC_AEAD_POLY1305
+  SSH_HMAC_AEAD_POLY1305,
+  SSH_HMAC_AEAD_GCM
 };
 
 enum ssh_des_e {
@@ -58,6 +59,13 @@ enum ssh_des_e {
 struct ssh_hmac_struct {
   const char* name;
   enum ssh_hmac_e hmac_type;
+  int etm;
+};
+
+enum ssh_crypto_direction_e {
+    SSH_DIRECTION_IN = 1,
+    SSH_DIRECTION_OUT = 2,
+    SSH_DIRECTION_BOTH = 3,
 };
 
 struct ssh_cipher_struct;
@@ -113,6 +121,6 @@ void ssh_crypto_finalize(void);
 void ssh_cipher_clear(struct ssh_cipher_struct *cipher);
 struct ssh_hmac_struct *ssh_get_hmactab(void);
 struct ssh_cipher_struct *ssh_get_ciphertab(void);
-const char *ssh_hmac_type_to_string(enum ssh_hmac_e hmac_type);
+const char *ssh_hmac_type_to_string(enum ssh_hmac_e hmac_type, int etm);
 
 #endif /* WRAPPER_H_ */
