@@ -438,77 +438,44 @@ static int torture_pkd_setup_ecdsa_521(void **state) {
 #ifdef HAVE_DSA
 #define PKDTESTS_MAC(f, client, maccmd) \
     /* MACs. */ \
-    f(client, rsa_hmac_sha1,                maccmd("hmac-sha1"),                      setup_rsa,        teardown) \
-    f(client, dsa_hmac_sha1,                maccmd("hmac-sha1"),                      setup_dsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_521,  teardown) \
-    f(client, rsa_hmac_sha2_256,            maccmd("hmac-sha2-256"),                  setup_rsa,        teardown) \
-    f(client, dsa_hmac_sha2_256,            maccmd("hmac-sha2-256"),                  setup_dsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_521,  teardown)
+    f(client, rsa_hmac_sha1,            maccmd("hmac-sha1"),      setup_rsa,        teardown) \
+    f(client, dsa_hmac_sha1,            maccmd("hmac-sha1"),      setup_dsa,        teardown) \
+    f(client, ecdsa_256_hmac_sha1,      maccmd("hmac-sha1"),      setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha1,      maccmd("hmac-sha1"),      setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha1,      maccmd("hmac-sha1"),      setup_ecdsa_521,  teardown) \
+    f(client, rsa_hmac_sha2_256,        maccmd("hmac-sha2-256"),  setup_rsa,        teardown) \
+    f(client, dsa_hmac_sha2_256,        maccmd("hmac-sha2-256"),  setup_dsa,        teardown) \
+    f(client, ecdsa_256_hmac_sha2_256,  maccmd("hmac-sha2-256"),  setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha2_256,  maccmd("hmac-sha2-256"),  setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha2_256,  maccmd("hmac-sha2-256"),  setup_ecdsa_521,  teardown)
 #define PKDTESTS_MAC_OPENSSHONLY(f, client, maccmd) \
-    f(client, rsa_hmac_sha1_etm,            maccmd("hmac-sha1-etm@openssh.com"),      setup_rsa,        teardown) \
-    f(client, dsa_hmac_sha1_etm,            maccmd("hmac-sha1-etm@openssh.com"),      setup_dsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_521,  teardown) \
-    f(client, rsa_hmac_sha2_256_etm,        maccmd("hmac-sha2-256-etm@openssh.com"),  setup_rsa,        teardown) \
-    f(client, dsa_hmac_sha2_256_etm,        maccmd("hmac-sha2-256-etm@openssh.com"),  setup_dsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_521,  teardown) \
-    f(client, ed25519_hmac_sha1,            maccmd("hmac-sha1"),                      setup_ed25519,    teardown) \
-    f(client, ed25519_hmac_sha1_etm,        maccmd("hmac-sha1-etm@openssh.com"),      setup_ed25519,    teardown) \
-    f(client, ed25519_hmac_sha2_256,        maccmd("hmac-sha2-256"),                  setup_ed25519,    teardown) \
-    f(client, ed25519_hmac_sha2_256_etm,    maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ed25519,    teardown) \
-    f(client, rsa_hmac_sha2_512,            maccmd("hmac-sha2-512"),                  setup_rsa,        teardown) \
-    f(client, dsa_hmac_sha2_512,            maccmd("hmac-sha2-512"),                  setup_dsa,        teardown) \
-    f(client, ed25519_hmac_sha2_512,        maccmd("hmac-sha2-512"),                  setup_ed25519,    teardown) \
-    f(client, ecdsa_256_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_521,  teardown) \
-    f(client, rsa_hmac_sha2_512_etm,        maccmd("hmac-sha2-512-etm@openssh.com"),  setup_rsa,        teardown) \
-    f(client, dsa_hmac_sha2_512_etm,        maccmd("hmac-sha2-512-etm@openssh.com"),  setup_dsa,        teardown) \
-    f(client, ed25519_hmac_sha2_512_etm,    maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ed25519,    teardown) \
-    f(client, ecdsa_256_hmac_sha2_512_etm,  maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_512_etm,  maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_512_etm,  maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ecdsa_521,  teardown)
+    f(client, ed25519_hmac_sha1,        maccmd("hmac-sha1"),      setup_ed25519,    teardown) \
+    f(client, ed25519_hmac_sha2_256,    maccmd("hmac-sha2-256"),  setup_ed25519,    teardown) \
+    f(client, rsa_hmac_sha2_512,        maccmd("hmac-sha2-512"),  setup_rsa,        teardown) \
+    f(client, dsa_hmac_sha2_512,        maccmd("hmac-sha2-512"),  setup_dsa,        teardown) \
+    f(client, ed25519_hmac_sha2_512,    maccmd("hmac-sha2-512"),  setup_ed25519,    teardown) \
+    f(client, ecdsa_256_hmac_sha2_512,  maccmd("hmac-sha2-512"),  setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha2_512,  maccmd("hmac-sha2-512"),  setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha2_512,  maccmd("hmac-sha2-512"),  setup_ecdsa_521,  teardown)
 #else
 #define PKDTESTS_MAC(f, client, maccmd) \
     /* MACs. */ \
-    f(client, rsa_hmac_sha1,                maccmd("hmac-sha1"),                      setup_rsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha1,          maccmd("hmac-sha1"),                      setup_ecdsa_521,  teardown) \
-    f(client, rsa_hmac_sha2_256,            maccmd("hmac-sha2-256"),                  setup_rsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_256,      maccmd("hmac-sha2-256"),                  setup_ecdsa_521,  teardown)
+    f(client, rsa_hmac_sha1,            maccmd("hmac-sha1"),      setup_rsa,        teardown) \
+    f(client, ecdsa_256_hmac_sha1,      maccmd("hmac-sha1"),      setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha1,      maccmd("hmac-sha1"),      setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha1,      maccmd("hmac-sha1"),      setup_ecdsa_521,  teardown) \
+    f(client, rsa_hmac_sha2_256,        maccmd("hmac-sha2-256"),  setup_rsa,        teardown) \
+    f(client, ecdsa_256_hmac_sha2_256,  maccmd("hmac-sha2-256"),  setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha2_256,  maccmd("hmac-sha2-256"),  setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha2_256,  maccmd("hmac-sha2-256"),  setup_ecdsa_521,  teardown)
 #define PKDTESTS_MAC_OPENSSHONLY(f, client, maccmd) \
-    f(client, rsa_hmac_sha1_etm,            maccmd("hmac-sha1-etm@openssh.com"),      setup_rsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha1_etm,      maccmd("hmac-sha1-etm@openssh.com"),      setup_ecdsa_521,  teardown) \
-    f(client, rsa_hmac_sha2_256_etm,        maccmd("hmac-sha2-256-etm@openssh.com"),  setup_rsa,        teardown) \
-    f(client, ecdsa_256_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_256_etm,  maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ecdsa_521,  teardown) \
-    f(client, ed25519_hmac_sha1,            maccmd("hmac-sha1"),                      setup_ed25519,    teardown) \
-    f(client, ed25519_hmac_sha1_etm,        maccmd("hmac-sha1-etm@openssh.com"),      setup_ed25519,    teardown) \
-    f(client, ed25519_hmac_sha2_256,        maccmd("hmac-sha2-256"),                  setup_ed25519,    teardown) \
-    f(client, ed25519_hmac_sha2_256_etm,    maccmd("hmac-sha2-256-etm@openssh.com"),  setup_ed25519,    teardown) \
-    f(client, rsa_hmac_sha2_512,            maccmd("hmac-sha2-512"),                  setup_rsa,        teardown) \
-    f(client, ed25519_hmac_sha2_512,        maccmd("hmac-sha2-512"),                  setup_ed25519,    teardown) \
-    f(client, ecdsa_256_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_512,      maccmd("hmac-sha2-512"),                  setup_ecdsa_521,  teardown) \
-    f(client, rsa_hmac_sha2_512_etm,        maccmd("hmac-sha2-512-etm@openssh.com"),  setup_rsa,        teardown) \
-    f(client, ed25519_hmac_sha2_512_etm,    maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ed25519,    teardown) \
-    f(client, ecdsa_256_hmac_sha2_512_etm,  maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_hmac_sha2_512_etm,  maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_hmac_sha2_512_etm,  maccmd("hmac-sha2-512-etm@openssh.com"),  setup_ecdsa_521,  teardown)
+    f(client, ed25519_hmac_sha1,        maccmd("hmac-sha1"),      setup_ed25519,    teardown) \
+    f(client, ed25519_hmac_sha2_256,    maccmd("hmac-sha2-256"),  setup_ed25519,    teardown) \
+    f(client, rsa_hmac_sha2_512,        maccmd("hmac-sha2-512"),  setup_rsa,        teardown) \
+    f(client, ed25519_hmac_sha2_512,    maccmd("hmac-sha2-512"),  setup_ed25519,    teardown) \
+    f(client, ecdsa_256_hmac_sha2_512,  maccmd("hmac-sha2-512"),  setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_hmac_sha2_512,  maccmd("hmac-sha2-512"),  setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_hmac_sha2_512,  maccmd("hmac-sha2-512"),  setup_ecdsa_521,  teardown)
 #endif
 
 static void torture_pkd_client_noop(void **state) {

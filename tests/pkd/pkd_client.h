@@ -72,6 +72,7 @@
 #define OPENSSH_MAC_CMD(macs) \
     OPENSSH_CMD_START "-o MACs=" macs " " OPENSSH_CMD_END
 
+
 /* Dropbear */
 
 #define DROPBEAR_BINARY "dbclient"
