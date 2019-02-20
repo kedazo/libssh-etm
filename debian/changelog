@@ -1,3 +1,10 @@
+libssh (0.8.9-0up1) UNRELEASED; urgency=medium
+
+  * libssh import from master (it has DH-GEX)
+  * applied patches from mailing list: Encrypt-Then-MAC (EtM)
+
+ -- David Kedves <kedazo@severalnines.com>  Wed, 20 Feb 2019 16:58:38 +0100
+
 libssh (0.8.6-0up7) cosmic; urgency=medium
 
   * Team upload.
